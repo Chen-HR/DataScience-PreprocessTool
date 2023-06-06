@@ -21,14 +21,14 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[lis
   Returns:
     list[list[str]]: fields cases
   """
-  print("Extraction_Cases: ")
-  progressBar = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Extraction_Cases: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   fieldsCases = []
   for field in fields:
     counter = Counter(dataFrame[field])
     fieldsCases += [list(pandas.DataFrame({"case": list(counter), "count": [counter[case] for case in list(counter)]}).sort_values("count", ascending=False)["case"])]
-    progressBar.update(1)
-  progressBar.close()
+    progressBar_0.update(1)
+  progressBar_0.close()
   return fieldsCases
 # %% 
 def Extraction_OneHotEncode_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
@@ -48,12 +48,12 @@ def Extraction_OneHotEncode_(dataFrame: pandas.DataFrame, fields: list[str], fie
   if len(fields)!=len(fieldsCases): 
     raise ValueError("len(fields) != len(fieldsCases)")
 
-  print("Extraction_OneHotEncode: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Extraction_OneHotEncode: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for fieldIndex in range(len(fields)):
     # Create fieldCase's Mapping rule and fieldCasesName
-    print(f"field: {fields[fieldIndex]}: ")
-    progressBar_1 = tqdm.tqdm(total=len(fieldsCases[fieldIndex]), unit=" case")
+    print(f"  field: {fields[fieldIndex]}: ")
+    progressBar_1 = tqdm.tqdm(total=len(fieldsCases[fieldIndex]), unit="case")
     caseMapping = {}
     for caseIndex in range(len(fieldsCases[fieldIndex])):
       caseMapping[fieldsCases[fieldIndex][caseIndex]] = caseIndex
@@ -104,7 +104,6 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field: str, parse, elements:
     _type_: result dataFrame
   """
   # Create new field to record the presence of each elements
-  progressBar = tqdm.tqdm(total=len(elements), unit=" element")
   elements_fieldName = dict()
   for element in elements:
     element_fieldName = field + "_" + element
@@ -113,19 +112,18 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field: str, parse, elements:
       element_fieldName += "_"
     # create and record field
     elements_fieldName[element] = element_fieldName
-    progressBar.update(1)
-  progressBar.close()
   
   result_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
 
   # Perform data extraction and update the new field
-  progressBar = tqdm.tqdm(total=len(dataFrame), unit=" row")
+  print("DataFrame.Extraction_Element: ")
+  progressBar_0 = tqdm.tqdm(total=len(dataFrame), unit="row")
   for index, row in dataFrame.iterrows():
     data = parse(str(row[field]))
     feature = [1 if element in data else 0 for element in elements]
     result_dataFrame.loc[index] = feature
-    progressBar.update(1)
-  progressBar.close()
+    progressBar_0.update(1)
+  progressBar_0.close()
   
   # Concatenate the temporary DataFrame with the original DataFrame
   dataFrame = pandas.concat([dataFrame, result_dataFrame], axis=1)
@@ -163,15 +161,15 @@ def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, b
     matplotlib.pyplot.title("Boxplot Before percentile Filtering")
     matplotlib.pyplot.show()
   # remove outliers use percentile
-  print("Filter_Percentile: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Filter_Percentile: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for field in fields:
     if plotDisplay:
       matplotlib.pyplot.figure(figsize=(2,5))
       matplotlib.pyplot.boxplot(dataFrame[field], showmeans=True, labels=[field])
       matplotlib.pyplot.title(f"{field} Boxplot Before percentile Filtering")
       matplotlib.pyplot.show()
-    progressBar_1 = tqdm.tqdm(total=round, unit=" round")
+    progressBar_1 = tqdm.tqdm(total=round, unit="round")
     for i in range(round):
       lower, upper = numpy.percentile(dataFrame[field],borderPercentile[0]), numpy.percentile(dataFrame[field],borderPercentile[1])
       percentile = upper - lower
@@ -220,7 +218,7 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
 
   Returns:
-    pandas.DataFrame: _description_
+    pandas.DataFrame: result dataFrame
   """
   # stddevRange will override stddevRanges
   if stddevRange!=2:
@@ -234,16 +232,12 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     # matplotlib.pyplot.title("Boxplot Before NormalDistribute Filtering")
     # matplotlib.pyplot.show()
   # remove outliers use NormalDistribute
-  print("Filter_NormalDistribution: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Filter_NormalDistribution: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for field in fields:
     if plotsDisplay:
       pass
-      # matplotlib.pyplot.figure(figsize=(2,5))
-      # matplotlib.pyplot.boxplot(dataFrame[field], showmeans=True, labels=[field])
-      # matplotlib.pyplot.title(f"{field} Boxplot Before NormalDistribute Filtering")
-      # matplotlib.pyplot.show()
-    progressBar_1 = tqdm.tqdm(total=round, unit=" round")
+    progressBar_1 = tqdm.tqdm(total=round, unit="round")
     for i in range(round): 
       mean = dataFrame[field].mean()
       lower, upper = mean-(dataFrame[field].std()*stddevRanges[0]), mean+(dataFrame[field].std()*stddevRanges[1])
@@ -278,8 +272,8 @@ def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str]) -> pan
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  print("Process_Normalization: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Process_Normalization: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for field in fields:
     dataFrame[field] = (dataFrame[field] - dataFrame[field].min())/(dataFrame[field].max() - dataFrame[field].min())
     progressBar_0.update(1)
@@ -309,8 +303,8 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     stddevRanges[0] = stddevRange
     stddevRanges[1] = stddevRange
   result = []
-  print("Extraction_Filter_NormalDistribution: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit=" field")
+  print("DataFrame.Extraction_Filter_NormalDistribution: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for fieldIndex in range(len(fields)):
     # Extract data
     population = []
