@@ -98,16 +98,18 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field: str, parse, elements:
     while element_fieldName in dataFrame:
       element_fieldName += "_"
     # create and record field
-    dataFrame[element_fieldName] = 0
     elements_fieldName[element] = element_fieldName
   
+  result_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
+
   # Perform data extraction and update the new field
   for index, row in dataFrame.iterrows():
-    data = parse(row[field])
-    for element in elements:
-      if element in data:
-        dataFrame.at[index, elements_fieldName[element]] = 1
+    data = parse(str(row[field]))
+    feature = [1 if element in data else 0 for element in elements]
+    result_dataFrame.loc[index] = feature
   
+  # Concatenate the temporary DataFrame with the original DataFrame
+  dataFrame = pandas.concat([dataFrame, result_dataFrame], axis=1)
   return dataFrame
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
