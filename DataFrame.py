@@ -26,7 +26,7 @@ def DataFrame_Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -
     fieldsCases += [list(pandas.DataFrame({"case": list(counter), "count": [counter[case] for case in list(counter)]}).sort_values("count", ascending=False)["case"])]
   return fieldsCases
 # %% 
-def DataFrame_Encoder_OneHot_Cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
+def DataFrame_Extraction_OneHotEncode_Cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
@@ -40,7 +40,6 @@ def DataFrame_Encoder_OneHot_Cases(dataFrame: pandas.DataFrame, fields: list[str
   Returns:
     pandas.DataFrame: result dataset
   """
-  
   if len(fields)!=len(fieldsCases): 
     raise ValueError("len(fields) != len(fieldsCases)")
 
@@ -67,7 +66,7 @@ def DataFrame_Encoder_OneHot_Cases(dataFrame: pandas.DataFrame, fields: list[str
     dataFrame = dataFrame.drop([fields[fieldIndex]], axis=1)
     dataFrame = dataFrame.drop([fieldsMappingName], axis=1)
   return dataFrame
-def DataFrame_Encoder_OneHot(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def DataFrame_Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
@@ -77,7 +76,7 @@ def DataFrame_Encoder_OneHot(dataFrame: pandas.DataFrame, fields: list[str]) -> 
   Returns:
     pandas.DataFrame: result dataset
   """
-  return DataFrame_Encoder_OneHot_Cases(dataFrame, fields, DataFrame_Extraction_Cases(dataFrame, fields))
+  return DataFrame_Extraction_OneHotEncode_Cases(dataFrame, fields, DataFrame_Extraction_Cases(dataFrame, fields))
 # %%
 def DataFrame_Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
