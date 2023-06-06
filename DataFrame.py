@@ -91,7 +91,7 @@ def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> p
   """
   return Extraction_OneHotEncode_(dataFrame, fields, Extraction_Cases(dataFrame, fields))
 # %%
-def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]):
+def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
@@ -104,7 +104,7 @@ def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: l
     ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
 
   Returns:
-    _type_: result dataFrame
+    pandas.DataFrame: result dataFrame
   """
   if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
