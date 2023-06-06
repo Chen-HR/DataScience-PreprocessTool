@@ -40,13 +40,13 @@ def Extraction_OneHotEncode_(dataFrame: pandas.DataFrame, fields: list[str], fie
     fieldsCases (list[list[str]]): target fields cases
 
   Raises:
-    ValueError: len(fields) != len(fieldsCases)
+    ValueError: different length: len(fields) != len(fieldsCases)
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
   if len(fields)!=len(fieldsCases): 
-    raise ValueError("len(fields) != len(fieldsCases)")
+    raise ValueError("different length: len(fields) != len(fieldsCases)")
 
   print("DataFrame.Extraction_OneHotEncode: ")
   progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
@@ -91,42 +91,53 @@ def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> p
   """
   return Extraction_OneHotEncode_(dataFrame, fields, Extraction_Cases(dataFrame, fields))
 # %%
-def Extraction_Element(dataFrame: pandas.DataFrame, field: str, parse, elements: set[str]):
+def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]):
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
     dataFrame (pandas.DataFrame): target dataFrame
-    field (str): target field
-    parse (function): function to convert the target field
-    elements (set[str]): The set of elements to extract
+    fields (list[str]): target fields
+    parse (list): functions to convert the target field
+    elements (list[set[str]]): The set of elements to extract
+
+  Raises:
+    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
 
   Returns:
     _type_: result dataFrame
   """
-  # Create new field to record the presence of each elements
-  elements_fieldName = dict()
-  for element in elements:
-    element_fieldName = field + "_" + element
-    # collision prevention
-    while element_fieldName in dataFrame:
-      element_fieldName += "_"
-    # create and record field
-    elements_fieldName[element] = element_fieldName
+  if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
+    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
   
-  result_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
-
-  # Perform data extraction and update the new field
   print("DataFrame.Extraction_Element: ")
-  progressBar_0 = tqdm.tqdm(total=len(dataFrame), unit="row")
-  for index, row in dataFrame.iterrows():
-    data = parse(str(row[field]))
-    feature = [1 if element in data else 0 for element in elements]
-    result_dataFrame.loc[index] = feature
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  for field, parse, elements in fields, parses, elementsList:
+    # Create new field to record the presence of each elements
+    elements_fieldName = dict()
+    for element in elements:
+      element_fieldName = field + "_" + element
+      # collision prevention
+      while element_fieldName in dataFrame:
+        element_fieldName += "_"
+      # create and record field
+      elements_fieldName[element] = element_fieldName
+    
+    elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
+
+    # Perform data extraction and update the new field
+    progressBar_1 = tqdm.tqdm(total=len(dataFrame), unit="row")
+    for index, row in dataFrame.iterrows():
+      data = parse(str(row[field]))
+      feature = [1 if element in data else 0 for element in elements]
+      elements_dataFrame.loc[index] = feature
+      progressBar_1.update(1)
+    progressBar_1.close()
+
+    # Concatenate the temporary DataFrame with the original DataFrame
+    dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
+
     progressBar_0.update(1)
   progressBar_0.close()
-  
-  # Concatenate the temporary DataFrame with the original DataFrame
-  dataFrame = pandas.concat([dataFrame, result_dataFrame], axis=1)
   return dataFrame
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
