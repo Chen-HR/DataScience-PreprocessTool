@@ -78,6 +78,38 @@ def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> p
   """
   return Extraction_OneHotEncode_Cases(dataFrame, fields, Extraction_Cases(dataFrame, fields))
 # %%
+def Extraction_Element(dataFrame: pandas.DataFrame, field: str, parse, elements: set[str]):
+  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
+
+  Args:
+    dataFrame (pandas.DataFrame): target dataFrame
+    field (str): target field
+    parse (function): function to convert the target field
+    elements (set[str]): The set of elements to extract
+
+  Returns:
+    _type_: result dataFrame
+  """
+  # Create new field to record the presence of each elements
+  elements_fieldName = dict()
+  for element in elements:
+    element_fieldName = field + "_" + element
+    # collision prevention
+    while element_fieldName in dataFrame:
+      element_fieldName += "_"
+    # create and record field
+    dataFrame[element_fieldName] = 0
+    elements_fieldName[element] = element_fieldName
+  
+  # Perform data extraction and update the new field
+  for index, row in dataFrame.iterrows():
+    data = parse(row[field])
+    for element in elements:
+      if element in data:
+        dataFrame.at[index, elements_fieldName[element]] = 1
+  
+  return dataFrame
+# %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
 
