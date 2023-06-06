@@ -7,14 +7,14 @@ from sklearn.preprocessing import OneHotEncoder
 from collections import Counter
 
 # %% 
-def DataFrame_FieldDifference(dataFrame_source: pandas.DataFrame, dataFrame_target: pandas.DataFrame) -> set[str]:
+def FieldDifference(dataFrame_source: pandas.DataFrame, dataFrame_target: pandas.DataFrame) -> set[str]:
   return set(dataFrame_target)-set(dataFrame_source)
 # %% 
-def DataFrame_Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[list]: 
+def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[list]: 
   """Return the cases of the fields in the data set, every field's cases will order by frequency of occurrence from highest to lowest
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset
+    dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
 
   Returns:
@@ -26,11 +26,11 @@ def DataFrame_Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -
     fieldsCases += [list(pandas.DataFrame({"case": list(counter), "count": [counter[case] for case in list(counter)]}).sort_values("count", ascending=False)["case"])]
   return fieldsCases
 # %% 
-def DataFrame_Extraction_OneHotEncode_Cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode_Cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset
+    dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
     fieldsCases (list[list[str]]): target fields cases
 
@@ -38,7 +38,7 @@ def DataFrame_Extraction_OneHotEncode_Cases(dataFrame: pandas.DataFrame, fields:
     ValueError: len(fields) != len(fieldsCases)
 
   Returns:
-    pandas.DataFrame: result dataset
+    pandas.DataFrame: result dataFrame
   """
   if len(fields)!=len(fieldsCases): 
     raise ValueError("len(fields) != len(fieldsCases)")
@@ -66,23 +66,23 @@ def DataFrame_Extraction_OneHotEncode_Cases(dataFrame: pandas.DataFrame, fields:
     dataFrame = dataFrame.drop([fields[fieldIndex]], axis=1)
     dataFrame = dataFrame.drop([fieldsMappingName], axis=1)
   return dataFrame
-def DataFrame_Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset
+    dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
 
   Returns:
-    pandas.DataFrame: result dataset
+    pandas.DataFrame: result dataFrame
   """
-  return DataFrame_Extraction_OneHotEncode_Cases(dataFrame, fields, DataFrame_Extraction_Cases(dataFrame, fields))
+  return Extraction_OneHotEncode_Cases(dataFrame, fields, Extraction_Cases(dataFrame, fields))
 # %%
-def DataFrame_Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset.
+    dataFrame (pandas.DataFrame): target dataFrame.
     fields (list[str]): target field
     round (int, optional): Filter rounds. Defaults to 1.
     borderCropping (int, optional): number of equal parts. This setting will override B. Defaults to borderPercentile.
@@ -93,7 +93,7 @@ def DataFrame_Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], 
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
 
   Returns:
-    pandas.DataFrame: result dataset
+    pandas.DataFrame: result dataFrame
   """
   # borderCropping  will override borderPercentile
   if borderCropping!=4:
@@ -132,26 +132,26 @@ def DataFrame_Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], 
     matplotlib.pyplot.title("Boxplot Before percentile Filtering")
     matplotlib.pyplot.show()
   return dataFrame
-def DataFrame_Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """Use IQR rules to filter specified fields.
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset.
+    dataFrame (pandas.DataFrame): target dataFrame.
     fields (list[str]): target field
     round (int, optional): Filter rounds. Defaults to 1.
     plotDisplay (bool, optional): Individually display the distribution of box plots before and after treatment in each column. Defaults to False.
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
 
   Returns:
-    pandas.DataFrame: result dataset
+    pandas.DataFrame: result dataFrame
   """
-  return DataFrame_Filter_Percentile(dataFrame, fields, round, plotDisplay=plotDisplay, plotsDisplay=plotsDisplay)
+  return Filter_Percentile(dataFrame, fields, round, plotDisplay=plotDisplay, plotsDisplay=plotsDisplay)
 # %%
-def DataFrame_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2, stddevRanges=[2, 2], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2, stddevRanges=[2, 2], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """Use the rule of normal distribution in the specified field, and retain the items whose distance from the mean is less than the specified standard deviation
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset
+    dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target field
     round (int, optional): Filter rounds. Defaults to 1.
     stddevRange (int, optional): Extended Standard Deviation Multiplier. This setting will override stddevRanges. Defaults to 2.
@@ -201,21 +201,21 @@ def DataFrame_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: lis
   return dataFrame
   
 # %%
-def DataFrame_Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
   """_summary_
 
   Args:
-    dataFrame (pandas.DataFrame): target dataset
+    dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
 
   Returns:
-    pandas.DataFrame: result dataset
+    pandas.DataFrame: result dataFrame
   """
   for field in fields:
     dataFrame[field] = (dataFrame[field] - dataFrame[field].min())/(dataFrame[field].max() - dataFrame[field].min())
   return dataFrame
 # %%
-def DataFrame_Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2, stddevRanges=[2, 2]) -> list[list]:
+def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2, stddevRanges=[2, 2]) -> list[list]:
   """Obtain keywords from the content of each field through the specified analysis method, and then extract keywords whose occurrence frequency deviation from the mean is less than the specified standard deviation
 
   Args:
