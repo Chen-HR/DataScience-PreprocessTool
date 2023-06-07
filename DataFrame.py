@@ -250,10 +250,10 @@ def Extraction_Element_batch(dataFrame: pandas.DataFrame, fields: list[str], par
       progressBar_1.close()
 
       result_array = numpy.array(elements_data)
-      result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
+      result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
 
-    result_df = pd.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
+    result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
     result_list.append(result_df)  # Append the final DataFrame to the result list
 
     progressBar_0.update(1)
