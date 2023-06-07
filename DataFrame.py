@@ -140,7 +140,7 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
   progressBar_0.close()
   return dataFrame
 
-def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
+def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
@@ -190,6 +190,71 @@ def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: l
     result_array = numpy.array(elements_data)
     result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
     result_list.append(result_df)
+
+    progressBar_0.update(1)
+  progressBar_0.close()
+
+  return result_list
+
+def Extraction_Element_batch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], batch_size=1000) -> pandas.DataFrame:
+  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
+  The function processes the data in batches specified by the batch_size parameter. 
+  It divides the data into smaller batches, processes each batch, and concatenates the resulting DataFrames at the end.
+  By processing the data in smaller batches, the memory usage is reduced since only a portion of the data is processed at a time.
+  (OpenAI(ChatGPT3.5) assisted production at 2023/06/07 16:40(+08:00))
+
+  Args:
+    dataFrame (pandas.DataFrame): target dataFrame
+    fields (list[str]): target fields
+    parse (list): functions to convert the target field
+    elements (list[set[str]]): The set of elements to extract
+    batch_size (int, optional): _description_. Defaults to 1000.
+
+  Raises:
+    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
+
+  Returns:
+    pandas.DataFrame: result dataFrame
+  """
+  # Check if the lengths of fields, parses, and elementsList are equal
+  if len(fields) != len(parses) or len(fields) != len(elementsList):
+    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+
+  print("DataFrame.Extraction_Element: ")
+  result_list = []  # List to store the resulting DataFrames
+
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  for field, parse, elements in zip(fields, parses, elementsList):
+    elements_fieldName = dict()
+    for element in elements:
+      element_fieldName = field + "_" + element
+      while element_fieldName in dataFrame:
+        element_fieldName += "_"
+      elements_fieldName[element] = element_fieldName
+
+    result_df_list = []  # List to store DataFrames for each batch
+
+    num_batches = int(numpy.ceil(len(dataFrame) / batch_size))
+    for i in range(num_batches):
+      start_idx = i * batch_size
+      end_idx = min((i + 1) * batch_size, len(dataFrame))
+      batch_data = dataFrame.iloc[start_idx:end_idx]  # Get a batch of data
+
+      elements_data = []  # List to store parsed data for each batch
+      progressBar_1 = tqdm.tqdm(total=len(batch_data), unit="row")
+      for index, row in batch_data.iterrows():
+        data = parse(str(row[field]))
+        feature = [1 if element in data else 0 for element in elements]
+        elements_data.append(feature)  # Append parsed data for each row in the batch
+        progressBar_1.update(1)
+      progressBar_1.close()
+
+      result_array = numpy.array(elements_data)
+      result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
+      result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+
+    result_df = pd.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
+    result_list.append(result_df)  # Append the final DataFrame to the result list
 
     progressBar_0.update(1)
   progressBar_0.close()
