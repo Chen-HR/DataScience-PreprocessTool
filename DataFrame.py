@@ -31,7 +31,7 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[lis
   progressBar_0.close()
   return fieldsCases
 # %% 
-def Extraction_OneHotEncode_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
@@ -79,7 +79,7 @@ def Extraction_OneHotEncode_(dataFrame: pandas.DataFrame, fields: list[str], fie
     progressBar_0.update(1)
   progressBar_0.close()
   return dataFrame
-def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
@@ -89,9 +89,9 @@ def Extraction_OneHotEncode(dataFrame: pandas.DataFrame, fields: list[str]) -> p
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  return Extraction_OneHotEncode_(dataFrame, fields, Extraction_Cases(dataFrame, fields))
+  return Extraction_OneHotEncode_merged_(dataFrame, fields, Extraction_Cases(dataFrame, fields))
 # %%
-def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
+def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
