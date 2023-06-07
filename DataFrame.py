@@ -111,7 +111,7 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
   
   print("DataFrame.Extraction_Element: ")
   progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
-  for field, parse, elements in fields, parses, elementsList:
+  for field, parse, elements in zip(fields, parses, elementsList):
     # Create new field to record the presence of each elements
     elements_fieldName = dict()
     for element in elements:
@@ -139,6 +139,62 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
     progressBar_0.update(1)
   progressBar_0.close()
   return dataFrame
+
+def Extraction_Element(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
+  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
+
+  Args:
+    dataFrame (pandas.DataFrame): target dataFrame
+    fields (list[str]): target fields
+    parse (list): functions to convert the target field
+    elements (list[set[str]]): The set of elements to extract
+
+  Raises:
+    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
+
+  Returns:
+    pandas.DataFrame: result dataFrame
+  """
+  if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
+    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+  result_list = list()
+  print("DataFrame.Extraction_Element: ")
+  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  for field, parse, elements in zip(fields, parses, elementsList):
+    # Create new field to record the presence of each elements
+    elements_fieldName = dict()
+    for element in elements:
+      element_fieldName = field + "_" + element
+      # collision prevention
+      while element_fieldName in dataFrame:
+        element_fieldName += "_"
+      # create and record field
+      elements_fieldName[element] = element_fieldName
+    
+    # elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
+    elements_data = []
+
+    # Perform data extraction and update the new field
+    progressBar_1 = tqdm.tqdm(total=len(dataFrame), unit="row")
+    for index, row in dataFrame.iterrows():
+      data = parse(str(row[field]))
+      feature = [1 if element in data else 0 for element in elements]
+      # elements_dataFrame.loc[index] = feature
+      elements_data.append(feature)
+      progressBar_1.update(1)
+    progressBar_1.close()
+
+    # # Concatenate the temporary DataFrame with the original DataFrame
+    # dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
+
+    result_array = numpy.array(elements_data)
+    result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
+    result_list.append(result_df)
+
+    progressBar_0.update(1)
+  progressBar_0.close()
+
+  return result_list
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
