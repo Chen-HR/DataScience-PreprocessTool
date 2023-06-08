@@ -196,35 +196,16 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
   return result_list
 
-def Extraction_Element_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], batch_size=1024) -> pandas.DataFrame:
-  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
-  The function processes the data in batches specified by the batch_size parameter. 
-  It divides the data into smaller batches, processes each batch, and concatenates the resulting DataFrames at the end.
-  By processing the data in smaller batches, the memory usage is reduced since only a portion of the data is processed at a time.
-  (OpenAI(ChatGPT3.5) assisted production at 2023/06/07 16:40(+08:00))
-
-  Args:
-    dataFrame (pandas.DataFrame): target dataFrame
-    fields (list[str]): target fields
-    parse (list): functions to convert the target field
-    elements (list[set[str]]): The set of elements to extract
-    batch_size (int, optional): _description_. Defaults to 1000.
-
-  Raises:
-    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
-
-  Returns:
-    pandas.DataFrame: result dataFrame
-  """
-  # Check if the lengths of fields, parses, and elementsList are equal
+def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=1, rowBatch_size=1024) -> pandas.DataFrame:
   if len(fields) != len(parses) or len(fields) != len(elementsList):
-    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
   print("DataFrame.Extraction_Element: ")
   result_list = []  # List to store the resulting DataFrames
 
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
-  for field, parse, elements in zip(fields, parses, elementsList):
+  total_iterations = len(fields)
+  progressBar_0 = tqdm.tqdm(total=total_iterations, unit="field", desc="Projects")
+  for project_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
     elements_fieldName = dict()
     for element in elements:
       element_fieldName = field + "_" + element
@@ -234,32 +215,46 @@ def Extraction_Element_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], 
 
     result_df_list = []  # List to store DataFrames for each batch
 
-    row_batche = int(numpy.ceil(len(dataFrame) / batch_size))
-    progressBar_1 = tqdm.tqdm(total=numpy.ceil(len(dataFrame) / batch_size), unit="row_batche")
-    for i in range(row_batche):
-      start_idx = i * batch_size
-      end_idx = min((i + 1) * batch_size, len(dataFrame))
-      batch_data = dataFrame.iloc[start_idx:end_idx]  # Get a batch of data
+    num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
+    progressBar_1 = tqdm.tqdm(total=num_element_batches, unit="element batch", desc=f"Project {project_idx}/{total_iterations}")
+    for element_batch_idx in range(num_element_batches):
+      start_element_idx = element_batch_idx * elementBatch_size
+      end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements))
+      element_batch = elements[start_element_idx:end_element_idx]  # Get a batch of elements
 
-      elements_data = []  # List to store parsed data for each batch
-      progressBar_2 = tqdm.tqdm(total=len(batch_data), unit="row")
-      for index, row in batch_data.iterrows():
-        data = parse(str(row[field]))
-        feature = [1 if element in data else 0 for element in elements]
-        elements_data.append(feature)  # Append parsed data for each row in the batch
+      elements_data = []  # List to store parsed data for each batch of elements
+      num_row_batches = int(numpy.ceil(len(dataFrame) / rowBatch_size))
+      progressBar_2 = tqdm.tqdm(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}/{num_element_batches}", leave=False)
+      for row_batch_idx in range(num_row_batches):
+        start_row_idx = row_batch_idx * rowBatch_size
+        end_row_idx = min((row_batch_idx + 1) * rowBatch_size, len(dataFrame))
+        row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx]  # Get a batch of rows
+
+        for index, row in row_batch_data.iterrows():
+          data = parse(str(row[field]))
+          feature = [1 if element in data else 0 for element in element_batch]
+          elements_data.append(feature)  # Append parsed data for each row in the batch
+
+        del row_batch_data  # Delete row batch data to free memory
         progressBar_2.update(1)
+
       progressBar_2.close()
 
       result_array = numpy.array(elements_data)
-      result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
+      result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values())[:len(element_batch)])
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+
+      del elements_data, result_array  # Delete elements data and result array to release memory
       progressBar_1.update(1)
+
     progressBar_1.close()
 
     result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
     result_list.append(result_df)  # Append the final DataFrame to the result list
 
+    del result_df_list, result_df  # Delete result DataFrame and result DataFrame list to free memory
     progressBar_0.update(1)
+
   progressBar_0.close()
 
   return result_list
