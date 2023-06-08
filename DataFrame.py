@@ -197,26 +197,29 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
   return result_list
 
 def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> pandas.DataFrame:
-  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
-  The function processes the data in batches specified by the batch_size parameter. 
-  It divides the data into smaller batches, processes each batch, and concatenates the resulting DataFrames at the end.
-  By processing the data in smaller batches, the memory usage is reduced since only a portion of the data is processed at a time.
+  """Extract specified elements from the specified fields of a DataFrame using batch processing.
+
+  The function divides the data into smaller batches specified by the `elementBatch_size` and `rowBatch_size` parameters.
+  Each batch is processed independently, and the resulting DataFrames are concatenated at the end.
+  By processing the data in smaller batches, memory usage is reduced since only a portion of the data is processed at a time.
+  This function supports progress bars using the `tqdm` library, with the option to use `tqdm_notebook` in Jupyter notebooks.
+  
   (OpenAI(ChatGPT3.5) assisted production at 2023/06/08)
 
   Args:
-    dataFrame (pandas.DataFrame): target dataFrame
-    fields (list[str]): target fields
-    parse (list): functions to convert the target field
-    elements (list[set[str]]): The set of elements to extract
-    elementBatch_size (int, optional): _description_. Defaults to 1.
-    rowBatch_size (int, optional): _description_. Defaults to 65536.
-    use_notebook (bool, optional): Whether to use tqdm_notebook for progress bars in Jupyter notebooks. Defaults to False.
+    dataFrame (pandas.DataFrame): The target DataFrame to extract elements from.
+    fields (list[str]): The list of field names to be processed.
+    parses (list): The list of parse functions corresponding to each field.
+    elementsList (list[set[str]]): The list of element sets to extract from each field.
+    elementBatch_size (int, optional): The size of the element batches to process. Defaults to 1.
+    rowBatch_size (int, optional): The size of the row batches to process. Defaults to 65536.
+    use_notebook (bool, optional): Whether to use `tqdm_notebook` for progress bars in Jupyter notebooks. Defaults to False.
 
   Raises:
-    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
+    ValueError: If the lengths of the `fields`, `parses`, and `elementsList` parameters are not the same.
 
   Returns:
-    pandas.DataFrame: result dataFrame list
+    pandas.DataFrame: A list of DataFrames containing the extracted elements for each element batch.
   """
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
