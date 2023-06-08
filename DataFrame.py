@@ -11,18 +11,20 @@ from collections import Counter
 def FieldDifference(dataFrame_source: pandas.DataFrame, dataFrame_target: pandas.DataFrame) -> set[str]:
   return set(dataFrame_target)-set(dataFrame_source)
 # %% 
-def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[list]: 
+def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> list[list]: 
   """Return the cases of the fields in the data set, every field's cases will order by frequency of occurrence from highest to lowest
 
   Args:
     dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     list[list[str]]: fields cases
   """
-  print("DataFrame.Extraction_Cases: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+  print(f"DataFrame.Extraction_Cases: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   fieldsCases = []
   for field in fields:
     counter = Counter(dataFrame[field])
@@ -31,13 +33,14 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str]) -> list[lis
   progressBar_0.close()
   return fieldsCases
 # %% 
-def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]], use_notebook=False) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
     dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
     fieldsCases (list[list[str]]): target fields cases
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Raises:
     ValueError: different length: len(fields) != len(fieldsCases)
@@ -47,13 +50,13 @@ def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[st
   """
   if len(fields)!=len(fieldsCases): 
     raise ValueError("different length: len(fields) != len(fieldsCases)")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  print("DataFrame.Extraction_OneHotEncode: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Extraction_OneHotEncode: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for fieldIndex in range(len(fields)):
     # Create fieldCase's Mapping rule and fieldCasesName
-    print(f"field: {fields[fieldIndex]}: ")
-    progressBar_1 = tqdm.tqdm(total=len(fieldsCases[fieldIndex]), unit="case")
+    progressBar_1 = tqdm_func(total=len(fieldsCases[fieldIndex]), unit="case", desc=f"Field {fieldIndex+1}/{len(fields)}")
     caseMapping = {}
     for caseIndex in range(len(fieldsCases[fieldIndex])):
       caseMapping[fieldsCases[fieldIndex][caseIndex]] = caseIndex
@@ -79,19 +82,20 @@ def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[st
     progressBar_0.update(1)
   progressBar_0.close()
   return dataFrame
-def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
     dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  return Extraction_OneHotEncode_merged_(dataFrame, fields, Extraction_Cases(dataFrame, fields))
+  return Extraction_OneHotEncode_merged_(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
 # %%
-def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
+def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
@@ -99,6 +103,7 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
     fields (list[str]): target fields
     parse (list): functions to convert the target field
     elements (list[set[str]]): The set of elements to extract
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Raises:
     ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
@@ -108,9 +113,10 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
   """
   if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   
-  print("DataFrame.Extraction_Element: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Extraction_Element: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field, parse, elements in zip(fields, parses, elementsList):
     # Create new field to record the presence of each elements
     elements_fieldName = dict()
@@ -125,7 +131,7 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
     elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
 
     # Perform data extraction and update the new field
-    progressBar_1 = tqdm.tqdm(total=len(dataFrame), unit="row")
+    progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
     for index, row in dataFrame.iterrows():
       data = parse(str(row[field]))
       feature = [1 if element in data else 0 for element in elements]
@@ -140,7 +146,7 @@ def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], pa
   progressBar_0.close()
   return dataFrame
 
-def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]]) -> pandas.DataFrame:
+def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
   Args:
@@ -148,6 +154,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
     fields (list[str]): target fields
     parse (list): functions to convert the target field
     elements (list[set[str]]): The set of elements to extract
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Raises:
     ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
@@ -155,11 +162,12 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
   Returns:
     pandas.DataFrame: result dataFrame
   """
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
   result_list = list()
-  print("DataFrame.Extraction_Element: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Extraction_Element: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field, parse, elements in zip(fields, parses, elementsList):
     # Create new field to record the presence of each elements
     elements_fieldName = dict()
@@ -175,7 +183,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
     elements_data = []
 
     # Perform data extraction and update the new field
-    progressBar_1 = tqdm.tqdm(total=len(dataFrame), unit="row")
+    progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
     for index, row in dataFrame.iterrows():
       data = parse(str(row[field]))
       feature = [1 if element in data else 0 for element in elements]
@@ -231,14 +239,10 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   """
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
   print(f"DataFrame.Extraction_Element: {fields}")
   result_list = []  # List to store the resulting DataFrames
-
-  if use_notebook:
-    tqdm_func = tqdm.tqdm_notebook
-  else:
-    tqdm_func = tqdm.tqdm
 
   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
@@ -297,7 +301,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
 
   return result_list
 # %%
-def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
 
   Args:
@@ -310,10 +314,12 @@ def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, b
     whiskers (list, optional): Extended magnification of upper and lower retention range. If whisker is set, this setting will have no effect. Defaults to [1.5, 1.5].
     plotDisplay (bool, optional): Individually display the distribution of box plots before and after treatment in each column. Defaults to False.
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   # borderCropping  will override borderPercentile
   if borderCropping!=4:
     borderPercentile[0] = 100/borderCropping
@@ -329,15 +335,15 @@ def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, b
     matplotlib.pyplot.title("Boxplot Before percentile Filtering")
     matplotlib.pyplot.show()
   # remove outliers use percentile
-  print("DataFrame.Filter_Percentile: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Filter_Percentile: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field in fields:
     if plotDisplay:
       matplotlib.pyplot.figure(figsize=(2,5))
       matplotlib.pyplot.boxplot(dataFrame[field], showmeans=True, labels=[field])
       matplotlib.pyplot.title(f"{field} Boxplot Before percentile Filtering")
       matplotlib.pyplot.show()
-    progressBar_1 = tqdm.tqdm(total=round, unit="round")
+    progressBar_1 = tqdm_func(total=round, unit="round", desc=f"Field {fields.index(field)+1}/{len(fields)}")
     for i in range(round):
       lower, upper = numpy.percentile(dataFrame[field],borderPercentile[0]), numpy.percentile(dataFrame[field],borderPercentile[1])
       percentile = upper - lower
@@ -358,7 +364,7 @@ def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, b
     matplotlib.pyplot.title("Boxplot Before percentile Filtering")
     matplotlib.pyplot.show()
   return dataFrame
-def Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """Use IQR rules to filter specified fields.
 
   Args:
@@ -367,13 +373,14 @@ def Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plo
     round (int, optional): Filter rounds. Defaults to 1.
     plotDisplay (bool, optional): Individually display the distribution of box plots before and after treatment in each column. Defaults to False.
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  return Filter_Percentile(dataFrame, fields, round, plotDisplay=plotDisplay, plotsDisplay=plotsDisplay)
+  return Filter_Percentile(dataFrame, fields, round, plotDisplay=plotDisplay, plotsDisplay=plotsDisplay, use_notebook=use_notebook)
 # %%
-def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2, stddevRanges=[2, 2], plotDisplay=False, plotsDisplay=False) -> pandas.DataFrame: 
+def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2, stddevRanges=[2, 2], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """Use the rule of normal distribution in the specified field, and retain the items whose distance from the mean is less than the specified standard deviation
 
   Args:
@@ -384,10 +391,12 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     stddevRanges (list, optional): Standard deviation upper and lower extension magnification. If stddevRange is set, this setting will have no effect. Defaults to [2, 2].
     plotDisplay (bool, optional): Individually display the distribution of box plots before and after treatment in each column. Defaults to False.
     plotsDisplay (bool, optional): Display the distribution of box plots before and after treatment in each column. Defaults to False.
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   # stddevRange will override stddevRanges
   if stddevRange!=2:
     stddevRanges[0] = stddevRange
@@ -400,12 +409,12 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     # matplotlib.pyplot.title("Boxplot Before NormalDistribute Filtering")
     # matplotlib.pyplot.show()
   # remove outliers use NormalDistribute
-  print("DataFrame.Filter_NormalDistribution: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Filter_NormalDistribution: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field in fields:
     if plotsDisplay:
       pass
-    progressBar_1 = tqdm.tqdm(total=round, unit="round")
+    progressBar_1 = tqdm_func(total=round, unit="round", desc=f"Field {fields.index(field)+1}/{len(fields)}")
     for i in range(round): 
       mean = dataFrame[field].mean()
       lower, upper = mean-(dataFrame[field].std()*stddevRanges[0]), mean+(dataFrame[field].std()*stddevRanges[1])
@@ -430,25 +439,27 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
   return dataFrame
   
 # %%
-def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> pandas.DataFrame: 
   """_summary_
 
   Args:
     dataFrame (pandas.DataFrame): target dataFrame
     fields (list[str]): target fields
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  print("DataFrame.Process_Normalization: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+  print(f"DataFrame.Process_Normalization: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field in fields:
     dataFrame[field] = (dataFrame[field] - dataFrame[field].min())/(dataFrame[field].max() - dataFrame[field].min())
     progressBar_0.update(1)
   progressBar_0.close()
   return dataFrame
 # %%
-def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2, stddevRanges=[2, 2]) -> list[list]:
+def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2, stddevRanges=[2, 2], use_notebook=False) -> list[list]:
   """Obtain keywords from the content of each field through the specified analysis method, and then extract keywords whose occurrence frequency deviation from the mean is less than the specified standard deviation
 
   Args:
@@ -457,22 +468,24 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     field_analyzes (list): List of Field Analysis Methods
     stddevRange (int, optional): Extended Standard Deviation Multiplier. This setting will override stddevRanges. Defaults to 2.
     stddevRanges (list, optional): Standard deviation upper and lower extension magnification. If stddevRange is set, this setting will have no effect. Defaults to [2, 2].
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
   Raises:
-      ValueError: different length
+    ValueError: different length
 
   Returns:
-      list[list]: The extracted list, the first level is the field, and the second level is the content
+    list[list]: The extracted list, the first level is the field, and the second level is the content
   """
   if len(fields)!=len(field_analyzes):
     raise ValueError("len(fields) != len(field_analyzes)")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   # stddevRange will override stddevRanges
   if stddevRange!=2:
     stddevRanges[0] = stddevRange
     stddevRanges[1] = stddevRange
   result = []
-  print("DataFrame.Extraction_Filter_NormalDistribution: ")
-  progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
+  print(f"DataFrame.Extraction_Filter_NormalDistribution: {fields}")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for fieldIndex in range(len(fields)):
     # Extract data
     population = []
