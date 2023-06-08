@@ -52,7 +52,7 @@ def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[st
   progressBar_0 = tqdm.tqdm(total=len(fields), unit="field")
   for fieldIndex in range(len(fields)):
     # Create fieldCase's Mapping rule and fieldCasesName
-    print(f"  field: {fields[fieldIndex]}: ")
+    print(f"field: {fields[fieldIndex]}: ")
     progressBar_1 = tqdm.tqdm(total=len(fieldsCases[fieldIndex]), unit="case")
     caseMapping = {}
     for caseIndex in range(len(fieldsCases[fieldIndex])):
@@ -235,20 +235,20 @@ def Extraction_Element_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], 
     result_df_list = []  # List to store DataFrames for each batch
 
     row_batche = int(numpy.ceil(len(dataFrame) / batch_size))
-    progressBar_1 = tqdm.tqdm(total=row_batche, unit="row_batche")
+    progressBar_1 = tqdm.tqdm(total=numpy.ceil(len(dataFrame) / batch_size), unit="row_batche")
     for i in range(row_batche):
       start_idx = i * batch_size
       end_idx = min((i + 1) * batch_size, len(dataFrame))
       batch_data = dataFrame.iloc[start_idx:end_idx]  # Get a batch of data
 
       elements_data = []  # List to store parsed data for each batch
-      progressBar_1 = tqdm.tqdm(total=len(batch_data), unit="row")
+      progressBar_2 = tqdm.tqdm(total=len(batch_data), unit="row")
       for index, row in batch_data.iterrows():
         data = parse(str(row[field]))
         feature = [1 if element in data else 0 for element in elements]
         elements_data.append(feature)  # Append parsed data for each row in the batch
-        progressBar_1.update(1)
-      progressBar_1.close()
+        progressBar_2.update(1)
+      progressBar_2.close()
 
       result_array = numpy.array(elements_data)
       result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
