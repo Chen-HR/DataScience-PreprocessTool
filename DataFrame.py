@@ -235,7 +235,7 @@ def Extraction_Element_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], 
     result_df_list = []  # List to store DataFrames for each batch
 
     row_batche = int(numpy.ceil(len(dataFrame) / batch_size))
-    progressBar_1 = tqdm.tqdm(total=len(row_batche), unit="row_batche")
+    progressBar_1 = tqdm.tqdm(total=row_batche, unit="row_batche")
     for i in range(row_batche):
       start_idx = i * batch_size
       end_idx = min((i + 1) * batch_size, len(dataFrame))
