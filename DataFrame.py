@@ -196,35 +196,43 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
   return result_list
 
-def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> pandas.DataFrame:
-  """Extract specified elements from the specified fields of a DataFrame using batch processing.
+def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=256, rowBatch_size=65536, use_notebook=False, ignore=None) -> pandas.DataFrame:
+  """Extract elements from a DataFrame using element batches and row batches
 
-  The function divides the data into smaller batches specified by the `elementBatch_size` and `rowBatch_size` parameters.
-  Each batch is processed independently, and the resulting DataFrames are concatenated at the end.
-  By processing the data in smaller batches, memory usage is reduced since only a portion of the data is processed at a time.
-  This function supports progress bars using the `tqdm` library, with the option to use `tqdm_notebook` in Jupyter notebooks.
-  
-  (OpenAI(ChatGPT3.5) assisted production at 2023/06/08)
+  This function takes a pandas DataFrame and performs element extraction based on provided fields, parse functions, and element lists. It utilizes element batches and row batches to process the data efficiently. The function follows the following steps:
+
+  1. Input validation: The function checks if the lengths of the `fields`, `parses`, and `elementsList` parameters are the same. If they differ, a ValueError is raised.
+
+  2. Progress bar setup: If the `use_notebook` parameter is set to True, the function uses `tqdm_notebook` from the tqdm library for progress bar visualization. Otherwise, it uses the `tqdm` function.
+
+  3. Iterating over fields: The function iterates over the fields defined by the `fields`, `parses`, and `elementsList` parameters. For each field, it prepares element field names and initializes a list to store the resulting DataFrames for element batches.
+
+  4. Processing element batches: The function divides the elements into batches based on the `elementBatch_size` parameter and processes them one batch at a time. Within each element batch, the function splits the data into row batches based on the `rowBatch_size` parameter. It then iterates over the row batches and applies the parse function to extract features for each row. If the value of a field is equal to the `ignore` parameter, the row is skipped.
+
+  5. Creating result DataFrames: The extracted features are stored in a list, and at the end of each element batch, a DataFrame is created using the collected features. The resulting DataFrames for each element batch are appended to a list.
+
+  6. Returning the result: The final result list containing the DataFrames for each element batch is returned.
 
   Args:
-    dataFrame (pandas.DataFrame): The target DataFrame to extract elements from.
-    fields (list[str]): The list of field names to be processed.
-    parses (list): The list of parse functions corresponding to each field.
-    elementsList (list[set[str]]): The list of element sets to extract from each field.
-    elementBatch_size (int, optional): The size of the element batches to process. Defaults to 1.
-    rowBatch_size (int, optional): The size of the row batches to process. Defaults to 65536.
-    use_notebook (bool, optional): Whether to use `tqdm_notebook` for progress bars in Jupyter notebooks. Defaults to False.
+    dataFrame (pandas.DataFrame): The input DataFrame to extract elements from.
+    fields (list[str]): A list of field names present in the DataFrame.
+    parses (list): A list of parse functions corresponding to each field.
+    elementsList (list[set[str]]): A list of element sets for each field.
+    elementBatch_size (int, optional): The number of elements to process in each batch. Defaults to 256.
+    rowBatch_size (int, optional): The number of rows to process in each batch. Defaults to 65536.
+    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
+    ignore (Any, optional): Value to ignore during element extraction. Rows with this value in the corresponding field will be skipped. Defaults to None.
 
   Raises:
     ValueError: If the lengths of the `fields`, `parses`, and `elementsList` parameters are not the same.
 
   Returns:
-    pandas.DataFrame: A list of DataFrames containing the extracted elements for each element batch.
+    pandas.DataFrame: A DataFrame containing the extracted elements for each element batch.
   """
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
-  print("DataFrame.Extraction_Element: ")
+  print(f"DataFrame.Extraction_Element: {fields}")
   result_list = []  # List to store the resulting DataFrames
 
   if use_notebook:
@@ -232,8 +240,8 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   else:
     tqdm_func = tqdm.tqdm
 
-  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Projects")
-  for project_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
+  for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
     elements_fieldName = dict()
     for element in elements:
       element_fieldName = field + "_" + element
@@ -245,7 +253,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
 
     # Batch processing for elements
     num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
-    progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Project {project_idx}")
+    progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Fields {field_idx}/{len(fields)}")
     for element_batch_idx in range(num_element_batches):
       start_element_idx = element_batch_idx * elementBatch_size
       end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements))
@@ -254,16 +262,17 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       # Batch processing for rows
       elements_data = []  # List to store parsed data for each batch of elements
       num_row_batches = int(numpy.ceil(len(dataFrame) / rowBatch_size))
-      progressBar_2 = tqdm_func(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}")
+      progressBar_2 = tqdm_func(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}/{num_element_batches}")
       for row_batch_idx in range(num_row_batches):
         start_row_idx = row_batch_idx * rowBatch_size
         end_row_idx = min((row_batch_idx + 1) * rowBatch_size, len(dataFrame))
         row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx]  # Get a batch of rows
 
         for index, row in row_batch_data.iterrows():
-          data = parse(str(row[field]))
-          feature = [1 if element in data else 0 for element in element_batch]
-          elements_data.append(feature)  # Append parsed data for each row in the batch
+          if row[field] != ignore:
+            data = parse(str(row[field]))
+            feature = [1 if element in data else 0 for element in element_batch]
+            elements_data.append(feature)  # Append parsed data for each row in the batch
 
         del row_batch_data  # Delete row batch data to free memory
 
@@ -271,7 +280,8 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       progressBar_2.close()
 
       result_array = numpy.array(elements_data)
-      result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
+      columns = list(elements_fieldName.values())[:len(element_batch)]  # Select columns matching the batch
+      result_df = pandas.DataFrame(result_array, columns=columns)
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
       del elements_data, result_array  # Delete elements data and result array DataFrame to release memory
 
