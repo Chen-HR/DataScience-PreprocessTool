@@ -196,7 +196,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
   return result_list
 
-def Extraction_Element_batch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], batch_size=1000) -> pandas.DataFrame:
+def Extraction_Element_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], batch_size=1024) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
   The function processes the data in batches specified by the batch_size parameter. 
   It divides the data into smaller batches, processes each batch, and concatenates the resulting DataFrames at the end.
@@ -234,8 +234,9 @@ def Extraction_Element_batch(dataFrame: pandas.DataFrame, fields: list[str], par
 
     result_df_list = []  # List to store DataFrames for each batch
 
-    num_batches = int(numpy.ceil(len(dataFrame) / batch_size))
-    for i in range(num_batches):
+    row_batche = int(numpy.ceil(len(dataFrame) / batch_size))
+    progressBar_1 = tqdm.tqdm(total=len(row_batche), unit="row_batche")
+    for i in range(row_batche):
       start_idx = i * batch_size
       end_idx = min((i + 1) * batch_size, len(dataFrame))
       batch_data = dataFrame.iloc[start_idx:end_idx]  # Get a batch of data
@@ -252,6 +253,8 @@ def Extraction_Element_batch(dataFrame: pandas.DataFrame, fields: list[str], par
       result_array = numpy.array(elements_data)
       result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+      progressBar_1.update(1)
+    progressBar_1.close()
 
     result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
     result_list.append(result_df)  # Append the final DataFrame to the result list
