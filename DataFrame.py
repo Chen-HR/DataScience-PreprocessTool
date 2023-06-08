@@ -197,6 +197,34 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
   return result_list
 
 def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=1, rowBatch_size=1024) -> pandas.DataFrame:
+  """Extract elements from a DataFrame using element batches and row batches
+
+  This function takes a pandas DataFrame and performs element extraction based on provided fields, parse functions, and element lists. It utilizes element batches and row batches to process the data efficiently. The function follows the following steps:
+
+  1. Input validation: The function checks if the lengths of the `fields`, `parses`, and `elementsList` parameters are the same. If they differ, a ValueError is raised.
+
+  2. Iterating over projects: The function iterates over the projects defined by the `fields`, `parses`, and `elementsList` parameters. For each project, it prepares element field names and initializes a list to store the resulting DataFrames for element batches.
+
+  3. Processing element batches: The function divides the elements into batches based on the `elementBatch_size` parameter and processes them one batch at a time. Within each element batch, the function splits the data into row batches based on the `rowBatch_size` parameter. It then iterates over the row batches and applies the parse function to extract features for each row.
+
+  4. Creating result DataFrames: The extracted features are stored in a list, and at the end of each element batch, a DataFrame is created using the collected features. The resulting DataFrames for each element batch are appended to a list.
+
+  5. Returning the result: The final result list containing the DataFrames for each element batch is returned.
+
+  Args:
+    dataFrame (pandas.DataFrame): The input DataFrame to extract elements from.
+    fields (list[str]): A list of field names present in the DataFrame.
+    parses (list): A list of parse functions corresponding to each field.
+    elementsList (list[set[str]]): A list of element sets for each field.
+    elementBatch_size (int, optional): The number of elements to process in each batch. Defaults to 1.
+    rowBatch_size (int, optional): The number of rows to process in each batch. Defaults to 1024.
+
+  Returns:
+    pandas.DataFrame: A DataFrame containing the extracted elements for each element batch.
+
+  Raises:
+    ValueError: If the lengths of the `fields`, `parses`, and `elementsList` parameters are not the same.
+  """
   if len(fields) != len(parses) or len(fields) != len(elementsList):
      raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
