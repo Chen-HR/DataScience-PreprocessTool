@@ -4,7 +4,7 @@ import numpy
 import pandas
 import tqdm
 import matplotlib.pyplot
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
 from collections import Counter
 
 # %% 
@@ -23,17 +23,59 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str], use_noteboo
     list[list[str]]: fields cases
   """
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+  fieldsCases = []
   print(f"DataFrame.Extraction_Cases: {fields}")
   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
-  fieldsCases = []
   for field in fields:
     counter = Counter(dataFrame[field])
     fieldsCases += [list(pandas.DataFrame({"case": list(counter), "count": [counter[case] for case in list(counter)]}).sort_values("count", ascending=False)["case"])]
     progressBar_0.update(1)
   progressBar_0.close()
   return fieldsCases
-# %% 
-def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]], use_notebook=False) -> pandas.DataFrame: 
+# %%
+# from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
+
+def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+  encoded_dataframes = []
+  for field in fields:
+    encoder = LabelEncoder()
+    encoded_labels = encoder.fit_transform(dataFrame[field])
+    encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_labels})
+    encoded_dataframes.append(encoded_dataframe)
+  return encoded_dataframes
+
+def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+  encoded_dataframes = []
+  for field in fields:
+    encoder = OneHotEncoder(dtype=int)
+    encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray()
+    feature_names = [field + '_' + str(category) for category in encoder.categories_[0]]
+    encoded_dataframe = pandas.DataFrame(encoded_features, columns=feature_names)
+    encoded_dataframes.append(encoded_dataframe)
+  return encoded_dataframes
+
+def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+  encoded_dataframes = []
+  for field in fields:
+    encoder = OrdinalEncoder()
+    encoded_features = encoder.fit_transform(dataFrame[[field]])
+    encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_features.flatten()})
+    encoded_dataframes.append(encoded_dataframe)
+  return encoded_dataframes
+
+def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+  encoded_dataframes = []
+  for field in fields:
+    encoder = LabelBinarizer()
+    binary_matrix = encoder.fit_transform(dataFrame[field])
+    feature_names = [field + '_' + str(category) for category in encoder.classes_]
+    encoded_dataframe = pandas.DataFrame(binary_matrix, columns=feature_names)
+    encoded_dataframes.append(encoded_dataframe)
+  return encoded_dataframes
+
+
+# %%
+def Extraction_OneHotEncode_merged_cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]], use_notebook=False) -> pandas.DataFrame: 
   """Upgrade the specified field content case to a new field
 
   Args:
@@ -52,12 +94,12 @@ def Extraction_OneHotEncode_merged_(dataFrame: pandas.DataFrame, fields: list[st
     raise ValueError("different length: len(fields) != len(fieldsCases)")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  print(f"DataFrame.Extraction_OneHotEncode: {fields}")
+  print(f"DataFrame.Extraction_OneHotEncode_merged_cases: {fields}")
   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for fieldIndex in range(len(fields)):
     # Create fieldCase's Mapping rule and fieldCasesName
-    progressBar_1 = tqdm_func(total=len(fieldsCases[fieldIndex]), unit="case", desc=f"Field {fieldIndex+1}/{len(fields)}")
     caseMapping = {}
+    progressBar_1 = tqdm_func(total=len(fieldsCases[fieldIndex]), unit="case", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for caseIndex in range(len(fieldsCases[fieldIndex])):
       caseMapping[fieldsCases[fieldIndex][caseIndex]] = caseIndex
       # fix `fieldsCases[fieldIndex][caseIndex]` collision
@@ -93,7 +135,7 @@ def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  return Extraction_OneHotEncode_merged_(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
+  return Extraction_OneHotEncode_merged(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
 # %%
 def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
@@ -241,8 +283,8 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  print(f"DataFrame.Extraction_Element: {fields}")
   result_list = []  # List to store the resulting DataFrames
+  print(f"DataFrame.Extraction_Element: {fields}")
 
   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
