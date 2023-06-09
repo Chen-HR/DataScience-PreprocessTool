@@ -35,7 +35,7 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str], use_noteboo
 # %%
 # from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
 
-def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
   encoded_dataframes = []
   for field in fields:
     encoder = LabelEncoder()
@@ -44,7 +44,7 @@ def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> p
     encoded_dataframes.append(encoded_dataframe)
   return encoded_dataframes
 
-def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
   encoded_dataframes = []
   for field in fields:
     encoder = OneHotEncoder(dtype=int)
@@ -54,7 +54,7 @@ def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> 
     encoded_dataframes.append(encoded_dataframe)
   return encoded_dataframes
 
-def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
   encoded_dataframes = []
   for field in fields:
     encoder = OrdinalEncoder()
@@ -63,7 +63,7 @@ def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) ->
     encoded_dataframes.append(encoded_dataframe)
   return encoded_dataframes
 
-def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str]) -> pandas.DataFrame: 
+def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
   encoded_dataframes = []
   for field in fields:
     encoder = LabelBinarizer()
@@ -135,7 +135,7 @@ def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str
   Returns:
     pandas.DataFrame: result dataFrame
   """
-  return Extraction_OneHotEncode_merged(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
+  return Extraction_OneHotEncode_merged_cases(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
 # %%
 def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
@@ -282,11 +282,8 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
-
   result_list = []  # List to store the resulting DataFrames
-  print(f"DataFrame.Extraction_Element: {fields}")
-
-  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc=f"DataFrame.Extraction_Element: {fields}")
   for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
     elements_fieldName = dict()
     for element in elements:
@@ -294,9 +291,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       while element_fieldName in dataFrame:
         element_fieldName += "_"
       elements_fieldName[element] = element_fieldName
-
     result_df_list = []  # List to store DataFrames for each batch
-
     # Batch processing for elements
     num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
     progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Fields {field_idx}/{len(fields)}")
@@ -304,7 +299,6 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       start_element_idx = element_batch_idx * elementBatch_size
       end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements))
       element_batch = elements[start_element_idx:end_element_idx]  # Get a batch of elements
-
       # Batch processing for rows
       elements_data = []  # List to store parsed data for each batch of elements
       num_row_batches = int(numpy.ceil(len(dataFrame) / rowBatch_size))
@@ -312,35 +306,32 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       for row_batch_idx in range(num_row_batches):
         start_row_idx = row_batch_idx * rowBatch_size
         end_row_idx = min((row_batch_idx + 1) * rowBatch_size, len(dataFrame))
-        row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx]  # Get a batch of rows
-
+        row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx].copy()  # Get a batch of rows
+        features_list = []  # List to store features for each row in the batch
         for index, row in row_batch_data.iterrows():
           if row[field] != ignore:
             data = parse(str(row[field]))
-            feature = [1 if element in data else 0 for element in element_batch]
-            elements_data.append(feature)  # Append parsed data for each row in the batch
-
+            features = [1 if element in data else 0 for element in element_batch]
+          else:
+            features = [0 for _ in element_batch]
+          features_list.append(features)  # Append features for each row in the batch
         del row_batch_data  # Delete row batch data to free memory
-
+        elements_data.extend(features_list)  # Extend elements_data with the features for the batch
+        del features_list  # Delete features list to free memory
         progressBar_2.update(1)
       progressBar_2.close()
-
       result_array = numpy.array(elements_data)
       columns = list(elements_fieldName.values())[:len(element_batch)]  # Select columns matching the batch
       result_df = pandas.DataFrame(result_array, columns=columns)
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
-      del elements_data, result_array  # Delete elements data and result array DataFrame to release memory
-
+      del elements_data, result_array  # Delete elements data and result array to release memory
       progressBar_1.update(1)
     progressBar_1.close()
-
     result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
     result_list.append(result_df)  # Append the final DataFrame to the result list
     del result_df_list, result_df  # Delete result DataFrame and result DataFrame list to free memory
-
     progressBar_0.update(1)
   progressBar_0.close()
-
   return result_list
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
@@ -479,7 +470,38 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     # matplotlib.pyplot.title("Boxplot Before NormalDistribute Filtering")
     # matplotlib.pyplot.show()
   return dataFrame
-  
+# %%
+def Filter_Features(features: list[pandas.DataFrame], target: pandas.DataFrame, threshold=0.8, use_notebook=False):
+  # Step 0: Check the length of feature and target
+  for feature in features:
+    if len(feature) != len(target):
+      raise ValueError("Length of feature and target should be the same.")
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+
+  result_list = list()
+
+  for feature in features:
+    # Combine feature and target into a single DataFrame
+    data = pandas.concat([feature, target], axis=1)
+      
+    # Step 1: Remove rows without data in feature and target
+    data.dropna(subset=feature.columns, inplace=True)
+      
+    # Step 2: Filter features based on correlation threshold
+    corr_matrix = data.corr().abs()  # Calculate absolute correlation matrix
+    correlated_features = set()  # Set to store highly correlated features
+      
+    # Find highly correlated features
+    for i in range(len(corr_matrix.columns)):
+      for j in range(i):
+        if corr_matrix.iloc[i, j] > threshold:
+          colname = corr_matrix.columns[i]
+          correlated_features.add(colname)
+      
+    # Step 3: Return the filtered feature DataFrame
+    result_list.append(feature.drop(columns=correlated_features))
+    
+  return result_list
 # %%
 def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> pandas.DataFrame: 
   """_summary_
@@ -531,8 +553,11 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
   for fieldIndex in range(len(fields)):
     # Extract data
     population = []
+    progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="feature", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for domain in dataFrame[fields[fieldIndex]].dropna().to_list():
       population += field_analyzes[fieldIndex](domain)
+      progressBar_1.update(1)
+    progressBar_1.close()
     # Merge content
     case = list(set(population))
     # Statistical frequency
@@ -541,9 +566,10 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     meanDiff = count-count.mean()
     # Normal distribution extraction field index
     keys = []
+    progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="NormalDistribution", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for key_index in numpy.where((meanDiff<(stddevRanges[1]*count.std()))&(meanDiff>(-stddevRanges[0]*count.std())))[0]:
       keys += [case[key_index]]
     result += [keys]
-    progressBar_0.update(1)
-  progressBar_0.close()
+    progressBar_1.update(1)
+  progressBar_1.close()
   return result
