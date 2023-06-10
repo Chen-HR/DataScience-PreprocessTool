@@ -1,7 +1,9 @@
 #! /usr/bin/python3
 # %% 
 import numpy
+import numpy as np
 import pandas
+import pandas as pd
 import tqdm
 import matplotlib.pyplot
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
@@ -278,10 +280,10 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
-  print(f"DataFrame.Extraction_Element: {fields}")
-  result_list = []  # List to store the resulting DataFrames
-
+  print("DataFrame.Extraction_Element: ")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+
+  result_df = None  # DataFrame to store the extracted features
 
   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
   for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
@@ -291,8 +293,6 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       while element_fieldName in dataFrame:
         element_fieldName += "_"
       elements_fieldName[element] = element_fieldName
-
-    result_df_list = []  # List to store DataFrames for each batch
 
     # Batch processing for elements
     num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
@@ -321,26 +321,21 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
         progressBar_2.update(1)
       progressBar_2.close()
 
-      result_df = pandas.DataFrame(numpy.array(elements_data), columns=[elements_fieldName[element] for element in element_batch])
-      result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+      if result_df is None:
+       result_df = pd.DataFrame(numpy.array(elements_data), columns=list(elements_fieldName.values())[:len(element_batch)])
+      else:
+        df = pd.DataFrame(numpy.array(elements_data), columns=list(elements_fieldName.values())[:len(element_batch)])
+        result_df = pd.concat([result_df, df], axis=1)  # Concatenate with the existing DataFrame
+
       del elements_data  # Delete elements data to release memory
 
       progressBar_1.update(1)
     progressBar_1.close()
 
-    # Concatenate DataFrames in chunks
-    chunk_size = 100  # Set the chunk size as desired
-    chunks = [chunk for chunk in result_df_list if len(chunk) > 0]
-    if len(chunks) > 0:
-      result_df = pandas.concat(chunks, ignore_index=True)
-      result_list.append(result_df)  # Append the final DataFrame to the result list
-      del result_df
-    del result_df_list, chunks  # Delete result DataFrame and result DataFrame list to free memory
-
     progressBar_0.update(1)
   progressBar_0.close()
 
-  return result_list
+  return result_df
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
@@ -479,36 +474,41 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     # matplotlib.pyplot.show()
   return dataFrame
 # %%
-def Filter_Features(features: list[pandas.DataFrame], target: pandas.DataFrame, threshold=0.8, use_notebook=False):
+def Filter_Features(features, target, threshold=0.8, use_notebook=False):
   # Step 0: Check the length of feature and target
   for feature in features:
     if len(feature) != len(target):
       raise ValueError("Length of feature and target should be the same.")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  result_list = list()
+  result_list = []
 
   for feature in features:
+    feature_df = pd.DataFrame(feature)  # Convert feature to DataFrame if necessary
+
     # Combine feature and target into a single DataFrame
-    data = pandas.concat([feature, target], axis=1)
-      
+    data = pd.concat([feature_df, target], axis=1)
+
     # Step 1: Remove rows without data in feature and target
-    data.dropna(subset=feature.columns, inplace=True)
-      
+    data.dropna(subset=feature_df.columns, inplace=True)
+
     # Step 2: Filter features based on correlation threshold
     corr_matrix = data.corr().abs()  # Calculate absolute correlation matrix
     correlated_features = set()  # Set to store highly correlated features
-      
+
     # Find highly correlated features
     for i in range(len(corr_matrix.columns)):
       for j in range(i):
         if corr_matrix.iloc[i, j] > threshold:
           colname = corr_matrix.columns[i]
           correlated_features.add(colname)
-      
+
+    # Filter out non-existent column names
+    correlated_features = correlated_features.intersection(feature_df.columns)
+
     # Step 3: Return the filtered feature DataFrame
-    result_list.append(feature.drop(columns=correlated_features))
-    
+    result_list.append(feature_df.drop(columns=correlated_features))
+
   return result_list
 # %%
 def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> pandas.DataFrame: 
