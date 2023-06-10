@@ -37,44 +37,137 @@ def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str], use_noteboo
 # %%
 # from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
 
-def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+# def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+#   encoded_dataframes = []
+#   for field in fields:
+#     encoder = LabelEncoder()
+#     encoded_labels = encoder.fit_transform(dataFrame[field])
+#     encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_labels})
+#     encoded_dataframes.append(encoded_dataframe)
+#   return encoded_dataframes
+
+# def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+#   encoded_dataframes = []
+#   for field in fields:
+#     encoder = OneHotEncoder(dtype=int)
+#     encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray()
+#     feature_names = [field + '_' + str(category) for category in encoder.categories_[0]]
+#     encoded_dataframe = pandas.DataFrame(encoded_features, columns=feature_names)
+#     encoded_dataframes.append(encoded_dataframe)
+#   return encoded_dataframes
+
+# def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+#   encoded_dataframes = []
+#   for field in fields:
+#     encoder = OrdinalEncoder()
+#     encoded_features = encoder.fit_transform(dataFrame[[field]])
+#     encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_features.flatten()})
+#     encoded_dataframes.append(encoded_dataframe)
+#   return encoded_dataframes
+
+# def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+#   encoded_dataframes = []
+#   for field in fields:
+#     encoder = LabelBinarizer()
+#     binary_matrix = encoder.fit_transform(dataFrame[field])
+#     feature_names = [field + '_' + str(category) for category in encoder.classes_]
+#     encoded_dataframe = pandas.DataFrame(binary_matrix, columns=feature_names)
+#     encoded_dataframes.append(encoded_dataframe)
+#   return encoded_dataframes
+
+def add_collision_suffix(field_name: str, existing_columns: set):
+  new_field_name = field_name
+  counter = 1
+  while new_field_name in existing_columns:
+    new_field_name = field_name + '_' + str(counter)
+    counter += 1
+  return new_field_name
+
+def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
   encoded_dataframes = []
+  existing_columns = set(dataFrame.columns)
   for field in fields:
     encoder = LabelEncoder()
     encoded_labels = encoder.fit_transform(dataFrame[field])
-    encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_labels})
+    
+    if enable_prefix:
+      field_prefix = prefix or field
+      encoded_field_name = field_prefix + '_Encoded'
+    else:
+      encoded_field_name = field + '_Encoded'
+    
+    if anti_collision:
+      encoded_field_name = add_collision_suffix(encoded_field_name, existing_columns | set([field]))
+    
+    encoded_dataframe = pd.DataFrame({encoded_field_name: encoded_labels})
     encoded_dataframes.append(encoded_dataframe)
+    existing_columns.add(encoded_field_name)
+  
   return encoded_dataframes
 
-def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
   encoded_dataframes = []
+  existing_columns = set(dataFrame.columns)
   for field in fields:
     encoder = OneHotEncoder(dtype=int)
     encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray()
     feature_names = [field + '_' + str(category) for category in encoder.categories_[0]]
-    encoded_dataframe = pandas.DataFrame(encoded_features, columns=feature_names)
+    
+    if enable_prefix:
+      field_prefix = prefix or field
+      feature_names = [field_prefix + '_' + str(category) for category in encoder.categories_[0]]
+    
+    if anti_collision:
+      feature_names = [add_collision_suffix(name, existing_columns) for name in feature_names]
+    
+    encoded_dataframe = pd.DataFrame(encoded_features, columns=feature_names)
     encoded_dataframes.append(encoded_dataframe)
+    existing_columns.update(feature_names)
+  
   return encoded_dataframes
 
-def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
   encoded_dataframes = []
+  existing_columns = set(dataFrame.columns)
   for field in fields:
     encoder = OrdinalEncoder()
     encoded_features = encoder.fit_transform(dataFrame[[field]])
-    encoded_dataframe = pandas.DataFrame({field + '_Encoded': encoded_features.flatten()})
+    
+    if enable_prefix:
+      field_prefix = prefix or field
+      encoded_field_name = field_prefix + '_Encoded'
+    else:
+      encoded_field_name = field + '_Encoded'
+    
+    if anti_collision:
+      encoded_field_name = add_collision_suffix(encoded_field_name, existing_columns | set([field]))
+    
+    encoded_dataframe = pd.DataFrame({encoded_field_name: encoded_features.flatten()})
     encoded_dataframes.append(encoded_dataframe)
+    existing_columns.add(encoded_field_name)
+  
   return encoded_dataframes
 
-def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str]) -> list[pandas.DataFrame]: 
+def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
   encoded_dataframes = []
+  existing_columns = set(dataFrame.columns)
   for field in fields:
     encoder = LabelBinarizer()
     binary_matrix = encoder.fit_transform(dataFrame[field])
     feature_names = [field + '_' + str(category) for category in encoder.classes_]
-    encoded_dataframe = pandas.DataFrame(binary_matrix, columns=feature_names)
+    
+    if enable_prefix:
+      field_prefix = prefix or field
+      feature_names = [field_prefix + '_' + str(category) for category in encoder.classes_]
+    
+    if anti_collision:
+      feature_names = [add_collision_suffix(name, existing_columns) for name in feature_names]
+    
+    encoded_dataframe = pd.DataFrame(binary_matrix, columns=feature_names)
     encoded_dataframes.append(encoded_dataframe)
+    existing_columns.update(feature_names)
+  
   return encoded_dataframes
-
 
 # %%
 def Extraction_OneHotEncode_merged_cases(dataFrame: pandas.DataFrame, fields: list[str], fieldsCases: list[list[str]], use_notebook=False) -> pandas.DataFrame: 
@@ -248,7 +341,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
   return result_list
 
-def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> pandas.DataFrame:
+def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[list[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> pandas.DataFrame:
   """Extract specified elements from the specified fields of a DataFrame using batch processing.
   
   The function divides the data into smaller batches specified by the `elementBatch_size` and `rowBatch_size` parameters.
@@ -280,7 +373,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
-  print("DataFrame.Extraction_Element: ")
+  print(f"DataFrame.Extraction_Element: {fields}")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
   result_df = None  # DataFrame to store the extracted features
@@ -322,7 +415,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
       progressBar_2.close()
 
       if result_df is None:
-       result_df = pd.DataFrame(numpy.array(elements_data), columns=list(elements_fieldName.values())[:len(element_batch)])
+        result_df = pd.DataFrame(numpy.array(elements_data), columns=list(elements_fieldName.values())[:len(element_batch)])
       else:
         df = pd.DataFrame(numpy.array(elements_data), columns=list(elements_fieldName.values())[:len(element_batch)])
         result_df = pd.concat([result_df, df], axis=1)  # Concatenate with the existing DataFrame
