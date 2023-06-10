@@ -111,7 +111,7 @@ def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], ena
   for field in fields:
     encoder = OneHotEncoder(dtype=int)
     encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray()
-    feature_names = [field + '_' + str(category) for category in encoder.categories_[0]]
+    feature_names = [str(category) for category in encoder.categories_[0]]
     
     if enable_prefix:
       field_prefix = prefix or field
@@ -154,7 +154,7 @@ def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str], en
   for field in fields:
     encoder = LabelBinarizer()
     binary_matrix = encoder.fit_transform(dataFrame[field])
-    feature_names = [field + '_' + str(category) for category in encoder.classes_]
+    feature_names = [str(category) for category in encoder.classes_]
     
     if enable_prefix:
       field_prefix = prefix or field
