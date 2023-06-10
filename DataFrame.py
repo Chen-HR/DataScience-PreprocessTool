@@ -321,10 +321,10 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
         progressBar_2.update(1)
       progressBar_2.close()
 
-      result_array = numpy.array(elements_data)
-      result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
+      columns = [elements_fieldName[element] for element in element_batch]
+      result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
-      del elements_data, result_array  # Delete elements data and result array DataFrame to release memory
+      del elements_data, columns  # Delete elements data to release memory
 
       progressBar_1.update(1)
     progressBar_1.close()
@@ -570,11 +570,8 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     meanDiff = count-count.mean()
     # Normal distribution extraction field index
     keys = []
-    progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="NormalDistribution", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for key_index in numpy.where((meanDiff<(stddevRanges[1]*count.std()))&(meanDiff>(-stddevRanges[0]*count.std())))[0]:
       keys += [case[key_index]]
-      progressBar_1.update(1)
-    progressBar_1.close()
     result += [keys]
     progressBar_0.update(1)
   progressBar_0.close()
