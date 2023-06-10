@@ -277,54 +277,65 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   """
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+
   print("DataFrame.Extraction_Element: ")
   result_list = []  # List to store the resulting DataFrames
-  if use_notebook:
-    tqdm_func = tqdm.tqdm_notebook
-  else:
-    tqdm_func = tqdm.tqdm
-  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Projects")
-  for project_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
+
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+
+  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
+  for field_idx, (field, parse, elements) in enumerate(zip(fields, parses, elementsList), start=1):
     elements_fieldName = dict()
     for element in elements:
       element_fieldName = field + "_" + element
       while element_fieldName in dataFrame:
         element_fieldName += "_"
       elements_fieldName[element] = element_fieldName
+
     result_df_list = []  # List to store DataFrames for each batch
+
     # Batch processing for elements
     num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
-    progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Project {project_idx}")
+    progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Field {field_idx}/{len(fields)}")
     for element_batch_idx in range(num_element_batches):
       start_element_idx = element_batch_idx * elementBatch_size
       end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements))
       element_batch = elements[start_element_idx:end_element_idx]  # Get a batch of elements
+
       # Batch processing for rows
       elements_data = []  # List to store parsed data for each batch of elements
       num_row_batches = int(numpy.ceil(len(dataFrame) / rowBatch_size))
-      progressBar_2 = tqdm_func(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}")
+      progressBar_2 = tqdm_func(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}/{num_element_batches}")
       for row_batch_idx in range(num_row_batches):
         start_row_idx = row_batch_idx * rowBatch_size
         end_row_idx = min((row_batch_idx + 1) * rowBatch_size, len(dataFrame))
         row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx]  # Get a batch of rows
+
         for index, row in row_batch_data.iterrows():
           data = parse(str(row[field]))
           feature = [1 if element in data else 0 for element in element_batch]
           elements_data.append(feature)  # Append parsed data for each row in the batch
+
         del row_batch_data  # Delete row batch data to free memory
+
         progressBar_2.update(1)
       progressBar_2.close()
+
       result_array = numpy.array(elements_data)
       result_df = pandas.DataFrame(result_array, columns=list(elements_fieldName.values()))
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
       del elements_data, result_array  # Delete elements data and result array DataFrame to release memory
+
       progressBar_1.update(1)
     progressBar_1.close()
+
     result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
     result_list.append(result_df)  # Append the final DataFrame to the result list
     del result_df_list, result_df  # Delete result DataFrame and result DataFrame list to free memory
+
     progressBar_0.update(1)
   progressBar_0.close()
+
   return result_list
 # %%
 def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
@@ -562,7 +573,9 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="NormalDistribution", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for key_index in numpy.where((meanDiff<(stddevRanges[1]*count.std()))&(meanDiff>(-stddevRanges[0]*count.std())))[0]:
       keys += [case[key_index]]
+      progressBar_1.update(1)
+    progressBar_1.close()
     result += [keys]
-    progressBar_1.update(1)
-  progressBar_1.close()
+    progressBar_0.update(1)
+  progressBar_0.close()
   return result
