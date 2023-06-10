@@ -278,7 +278,7 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
-  print("DataFrame.Extraction_Element: ")
+  print(f"DataFrame.Extraction_Element: {fields}")
   result_list = []  # List to store the resulting DataFrames
 
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
@@ -321,17 +321,21 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, fields
         progressBar_2.update(1)
       progressBar_2.close()
 
-      columns = [elements_fieldName[element] for element in element_batch]
-      result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
+      result_df = pandas.DataFrame(numpy.array(elements_data), columns=[elements_fieldName[element] for element in element_batch])
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
-      del elements_data, columns  # Delete elements data to release memory
+      del elements_data  # Delete elements data to release memory
 
       progressBar_1.update(1)
     progressBar_1.close()
 
-    result_df = pandas.concat(result_df_list, ignore_index=True)  # Concatenate DataFrames for all batches
-    result_list.append(result_df)  # Append the final DataFrame to the result list
-    del result_df_list, result_df  # Delete result DataFrame and result DataFrame list to free memory
+    # Concatenate DataFrames in chunks
+    chunk_size = 100  # Set the chunk size as desired
+    chunks = [chunk for chunk in result_df_list if len(chunk) > 0]
+    if len(chunks) > 0:
+      result_df = pandas.concat(chunks, ignore_index=True)
+      result_list.append(result_df)  # Append the final DataFrame to the result list
+      del result_df
+    del result_df_list, chunks  # Delete result DataFrame and result DataFrame list to free memory
 
     progressBar_0.update(1)
   progressBar_0.close()
