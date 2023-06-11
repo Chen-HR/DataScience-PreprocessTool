@@ -437,8 +437,8 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
   if len(field_data) == 0:
     raise ValueError("field_data cannot be empty")
 
-  print(f"DataFrame.Extraction_Element: {field_data}")
-  result_list = []  # List to store the resulting DataFrames
+  print(f"DataFrame.Extraction_Element: {[field_info.get('field') for field_info in field_data]}")
+  result_list: list[pandas.DataFrame] = []  # List to store the resulting DataFrames
 
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
@@ -455,7 +455,7 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
         element_fieldName += "_"
       elements_fieldName[element] = element_fieldName
 
-    # result_df_list = []  # List to store DataFrames for each batch
+    result_df_list: list[pandas.DataFrame] = []  # List to store DataFrames for each batch
 
     # Batch processing for elements
     num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size)) # type: ignore
@@ -486,8 +486,8 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
 
       columns = [elements_fieldName[element] for element in element_batch]
       result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
-      # result_df_list.append(result_df)  # Append DataFrame for the batch to the list
-      result_list.append(result_df)  # Append the list of DataFrames for the field
+      result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+      # result_list.append(result_df)  # Append the list of DataFrames for the field
       del elements_data  # Delete elements data to release memory
 
       # print(f"{elementBatch_size} if ({(element_batch_idx+1)*elementBatch_size} < {len(elements)}) else {(len(elements)-element_batch_idx*elementBatch_size)}") # type: ignore
@@ -495,8 +495,8 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
     progressBar_1.close()
 
     # result_list.append(result_df)  # Append the list of DataFrames for the field
-    # result_list.append(result_df_list[0])  # Append the list of DataFrames for the field
-    # del result_df_list  # Delete result DataFrame list to free memory
+    result_list.append(pd.concat(result_df_list, axis=1))  # Append the list of DataFrames for the field
+    del result_df_list  # Delete result DataFrame list to free memory
 
     progressBar_0.update(1)
   progressBar_0.close()
