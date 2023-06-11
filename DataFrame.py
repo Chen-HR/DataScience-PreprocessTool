@@ -11,6 +11,9 @@ import matplotlib.pyplot
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder, LabelBinarizer
 from collections import Counter
 
+# %%
+def PandasDataFrame_Info(PandasDataFrame: pandas.DataFrame) -> str:
+  return f"[{len(PandasDataFrame)} rows x {len(PandasDataFrame.columns)} columns]"
 # %% 
 def FieldDifference(dataFrame_source: pandas.DataFrame, dataFrame_target: pandas.DataFrame) -> set[str]:
   return set(dataFrame_target)-set(dataFrame_source) # type: ignore
@@ -101,7 +104,7 @@ def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str], enab
     if anti_collision:
       encoded_field_name = add_collision_suffix(encoded_field_name, existing_columns | set([field]))
     
-    encoded_dataframe = pd.DataFrame({encoded_field_name: encoded_labels})
+    encoded_dataframe = pd.DataFrame({encoded_field_name: encoded_labels}, dtype=numpy.uint8)
     encoded_dataframes.append(encoded_dataframe)
     existing_columns.add(encoded_field_name)
   
@@ -122,7 +125,7 @@ def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], ena
     if anti_collision:
       feature_names = [add_collision_suffix(name, existing_columns) for name in feature_names]
     
-    encoded_dataframe = pd.DataFrame(encoded_features, columns=feature_names)
+    encoded_dataframe = pd.DataFrame(encoded_features, columns=feature_names, dtype=numpy.uint8)
     encoded_dataframes.append(encoded_dataframe)
     existing_columns.update(feature_names)
   
@@ -372,7 +375,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
   Returns:
     pandas.DataFrame: A list of DataFrames containing the extracted elements for each element batch.
   """
-  print(f"█Extraction_Element_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, parses= {parses}, elementsList= {elementsList}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) start")
+  # print(f"█Extraction_Element_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, parses= {parses}, elementsList= {elementsList}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) start")
   if len(fields) != len(parses) or len(fields) != len(elementsList):
     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
 
@@ -411,7 +414,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
         for index, row in row_batch_data.iterrows():
           data = parse(str(row[field]))
-          feature = [1 if element in data else 0 for element in element_batch]
+          feature = [np.int8(1) if element in data else np.int8(0) for element in element_batch]
           elements_data.append(feature)  # Append parsed data for each row in the batch
 
         del row_batch_data  # Delete row batch data to free memory
@@ -420,7 +423,7 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
       progressBar_2.close()
 
       columns = [elements_fieldName[element] for element in element_batch]
-      result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
+      result_df = pandas.DataFrame(numpy.array(elements_data, dtype=numpy.uint8), columns=columns)
       result_df_list.append(result_df)  # Append DataFrame for the batch to the list
       del elements_data  # Delete elements data to release memory
 
@@ -432,12 +435,12 @@ def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: 
 
     progressBar_0.update(1)
   progressBar_0.close()
-  print(f"█Extraction_Element_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, parses= {parses}, elementsList= {elementsList}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) end")
-  print(f"█return result= {result_list}")
+  # print(f"█Extraction_Element_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, parses= {parses}, elementsList= {elementsList}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) end")
+  # print(f"█return result= {result_list}")
 
   return result_list
 def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, object]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> list[pandas.DataFrame]:
-  print(f"█Extraction_Element(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) start")
+  # print(f"█Extraction_Element(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) start")
   if len(field_data) == 0:
     raise ValueError("field_data cannot be empty")
 
@@ -481,7 +484,7 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
 
         for index, row in row_batch_data.iterrows():
           data: list[str] = parse(str(row[field])) # type: ignore
-          feature = [1 if element in data else 0 for element in element_batch]
+          feature = [np.int8(1) if element in data else np.int8(0) for element in element_batch]
           elements_data.append(feature)
 
         del row_batch_data
@@ -490,23 +493,23 @@ def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, o
       progressBar_2.close()
 
       columns = [elements_fieldName[element] for element in element_batch]
-      result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
+      result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns, dtype=numpy.uint8)
       del elements_data
       result_df_list.append(result_df)
 
       progressBar_1.update(elementBatch_size if ((element_batch_idx + 1) * elementBatch_size < len(elements)) else (len(elements) - element_batch_idx * elementBatch_size))
     progressBar_1.close()
 
-    for index in range(len(result_df_list)):
-      print(f"result_df_list[{index}]: {type(result_df_list[index])} [{len(result_df_list[index])} row x {len(result_df_list[index].columns)} columns]")
+    # for index in range(len(result_df_list)):
+    #   print(f"result_df_list[{index}]: {type(result_df_list[index])} [{len(result_df_list[index])} row x {len(result_df_list[index].columns)} columns]")
     result_list.append(pd.concat(result_df_list, axis=1))
     del result_df_list
-    print(f"result_list[{-1}]: {type(result_list[-1])} [{len(result_list[-1])} row x {len(result_list[-1].columns)} columns]")
+    # print(f"result_list[{-1}]: {type(result_list[-1])} [{len(result_list[-1])} row x {len(result_list[-1].columns)} columns]")
 
     progressBar_0.update(1)
   progressBar_0.close()
-  print(f"█Extraction_Element(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) end")
-  print(f"█return result= {result_list}")
+  # print(f"█Extraction_Element(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, elementBatch_size= {elementBatch_size}, rowBatch_size= {rowBatch_size}, use_notebook= {use_notebook}) end")
+  # print(f"█return result= {result_list}")
 
   return result_list
 
@@ -656,10 +659,13 @@ def Filter_Features(features: list[pandas.DataFrame], target: pandas.DataFrame, 
       raise ValueError(f"Length of feature and target should be the same. {len(feature)} != {len(target)} : {feature}")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
+  print(f"DataFrame.Filter_Features: {[PandasDataFrame_Info(feature) for feature in features]}")
   result_list: list[pandas.DataFrame] = []
 
-  for feature in features:
-    feature_df = pd.DataFrame(feature)  # Convert feature to DataFrame if necessary
+  progressBar_0 = tqdm_func(total=len(features), unit="FeaturesList", desc="FeaturesLists")
+  for feature_idx, feature in enumerate(features, start=0):
+  # for feature in features:
+    feature_df = pd.DataFrame(feature, dtype=numpy.uint8)  # Convert feature to DataFrame if necessary
 
     # Combine feature and target into a single DataFrame
     data = pd.concat([feature_df, target], axis=1)
@@ -672,17 +678,22 @@ def Filter_Features(features: list[pandas.DataFrame], target: pandas.DataFrame, 
     correlated_features = set()  # Set to store highly correlated features
 
     # Find highly correlated features
+    # progressBar_1 = tqdm_func(total=((len(corr_matrix.columns)//2 if len(corr_matrix.columns)%2==0 else 1)*((len(corr_matrix.columns)+1)//2 if len(corr_matrix.columns)%2==1 else 1)), unit="corr", desc=f"FeaturesLists {feature_idx}/{len(features)}: corr")
     for i in range(len(corr_matrix.columns)):
       for j in range(i):
         if corr_matrix.iloc[i, j] > threshold: # type: ignore
           colname = corr_matrix.columns[i]
           correlated_features.add(colname)
+        # progressBar_1.update(1)
+    # progressBar_1.close()
 
     # Filter out non-existent column names
     correlated_features = correlated_features.intersection(feature_df.columns)
 
     # Step 3: Return the filtered feature DataFrame
     result_list.append(feature_df.drop(columns=correlated_features)) # type: ignore
+    progressBar_0.update(1)
+  progressBar_0.close()
 
   return result_list
 # %%
@@ -726,7 +737,7 @@ def Extraction_Filter_NormalDistribution_(dataFrame: pandas.DataFrame, fields: l
   Returns:
     list[list]: The extracted list, the first level is the field, and the second level is the content
   """
-  print(f"█Extraction_Filter_NormalDistribution_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, field_analyzes= {field_analyzes}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) start")
+  # print(f"█Extraction_Filter_NormalDistribution_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, field_analyzes= {field_analyzes}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) start")
   if len(fields)!=len(field_analyzes):
     raise ValueError("len(fields) != len(field_analyzes)")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
@@ -746,8 +757,8 @@ def Extraction_Filter_NormalDistribution_(dataFrame: pandas.DataFrame, fields: l
   for fieldIndex in range(len(fields)):
     # Extract data
     population = []
-    progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="feature", desc=f"Field {fieldIndex+1}/{len(fields)}")
-    for domain in dataFrame[fields[fieldIndex]].dropna().to_list():
+    progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]]), unit="feature", desc=f"Field {fieldIndex+1}/{len(fields)}")
+    for domain in dataFrame[fields[fieldIndex]]:
       population += field_analyzes[fieldIndex](domain)
       progressBar_1.update(1)
     progressBar_1.close()
@@ -765,12 +776,12 @@ def Extraction_Filter_NormalDistribution_(dataFrame: pandas.DataFrame, fields: l
     progressBar_0.update(1)
   progressBar_0.close()
   stddevRange, stddevRanges[0], stddevRanges[1] = None, None, None
-  print(f"█Extraction_Filter_NormalDistribution_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, field_analyzes= {field_analyzes}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) end")
-  print(f"█return result= {result}")
+  # print(f"█Extraction_Filter_NormalDistribution_(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], fields= {fields}, field_analyzes= {field_analyzes}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) end")
+  # print(f"█return result= {result}")
   return result
 # def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, field_data: list[dict[str, object]], stddevRange=2.0, stddevRanges=[2.0, 2.0], use_notebook=False) -> list[list]:
 def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, field_data: list[dict[str, object]], stddevRange: float | None = None, stddevRanges: list[float | None] = [None, None], use_notebook=False) -> list[list]:
-  print(f"█Extraction_Filter_NormalDistribution(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) start")
+  # print(f"█Extraction_Filter_NormalDistribution(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) start")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   # stddevRange will override stddevRanges
   if stddevRange == None:
@@ -791,8 +802,8 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, field_data
     parse: object | None = field_info.get("parse")
     # Extract data
     population = []
-    progressBar_1 = tqdm_func(total=len(dataFrame[field].dropna().to_list()), unit="feature", desc=f"Field {field_idx+1}/{len(field_data)}")
-    for domain in dataFrame[field].dropna().to_list():
+    progressBar_1 = tqdm_func(total=len(dataFrame[field]), unit="feature", desc=f"Field {field_idx+1}/{len(field_data)}")
+    for domain in dataFrame[field]:
       population += parse(domain) # type: ignore
       progressBar_1.update(1)
     progressBar_1.close()
@@ -810,6 +821,6 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, field_data
     progressBar_0.update(1)
   progressBar_0.close()
   stddevRange, stddevRanges[0], stddevRanges[1] = None, None, None
-  print(f"█Extraction_Filter_NormalDistribution(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) end")
-  print(f"█return result= {result}")
+  # print(f"█Extraction_Filter_NormalDistribution(dataFrame= [{len(dataFrame )} row x {len(dataFrame.columns)} columns], field_data= {field_data}, stddevRange= {stddevRange}, stddevRanges= {stddevRanges}, use_notebook= {use_notebook}) end")
+  # print(f"█return result= {result}")
   return result
