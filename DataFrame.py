@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 # %% 
+# from typing import List, Dict, Callable
+import typing 
 import numpy
 import numpy as np
 import pandas
@@ -11,7 +13,7 @@ from collections import Counter
 
 # %% 
 def FieldDifference(dataFrame_source: pandas.DataFrame, dataFrame_target: pandas.DataFrame) -> set[str]:
-  return set(dataFrame_target)-set(dataFrame_source)
+  return set(dataFrame_target)-set(dataFrame_source) # type: ignore
 # %% 
 def Extraction_Cases(dataFrame: pandas.DataFrame, fields: list[str], use_notebook=False) -> list[list]: 
   """Return the cases of the fields in the data set, every field's cases will order by frequency of occurrence from highest to lowest
@@ -83,7 +85,7 @@ def add_collision_suffix(field_name: str, existing_columns: set):
     counter += 1
   return new_field_name
 
-def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
+def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> list[pandas.DataFrame]:
   encoded_dataframes = []
   existing_columns = set(dataFrame.columns)
   for field in fields:
@@ -105,17 +107,17 @@ def Extraction_LabelEncoder(dataFrame: pandas.DataFrame, fields: list[str], enab
   
   return encoded_dataframes
 
-def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
+def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> list[pandas.DataFrame]:
   encoded_dataframes = []
   existing_columns = set(dataFrame.columns)
   for field in fields:
     encoder = OneHotEncoder(dtype=int)
-    encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray()
-    feature_names = [str(category) for category in encoder.categories_[0]]
+    encoded_features = encoder.fit_transform(dataFrame[[field]]).toarray() # type: ignore
+    feature_names = [str(category) for category in encoder.categories_[0]] # type: ignore
     
     if enable_prefix:
       field_prefix = prefix or field
-      feature_names = [field_prefix + '_' + str(category) for category in encoder.categories_[0]]
+      feature_names = [field_prefix + '_' + str(category) for category in encoder.categories_[0]] # type: ignore
     
     if anti_collision:
       feature_names = [add_collision_suffix(name, existing_columns) for name in feature_names]
@@ -126,7 +128,7 @@ def Extraction_OneHotEncoder(dataFrame: pandas.DataFrame, fields: list[str], ena
   
   return encoded_dataframes
 
-def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
+def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> list[pandas.DataFrame]:
   encoded_dataframes = []
   existing_columns = set(dataFrame.columns)
   for field in fields:
@@ -148,7 +150,7 @@ def Extraction_OrdinalEncoder(dataFrame: pandas.DataFrame, fields: list[str], en
   
   return encoded_dataframes
 
-def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> pandas.DataFrame:
+def Extraction_LabelBinarizer(dataFrame: pandas.DataFrame, fields: list[str], enable_prefix=True, prefix=None, anti_collision=True) -> list[pandas.DataFrame]:
   encoded_dataframes = []
   existing_columns = set(dataFrame.columns)
   for field in fields:
@@ -210,7 +212,7 @@ def Extraction_OneHotEncode_merged_cases(dataFrame: pandas.DataFrame, fields: li
     # Add a field to record Mapping Code
     dataFrame[fieldsMappingName] = dataFrame[fields[fieldIndex]].map(caseMapping)
     # Post conversion information
-    attackType_OneHotEncoder = OneHotEncoder(dtype=int).fit_transform(dataFrame[[fieldsMappingName]]).toarray()
+    attackType_OneHotEncoder = OneHotEncoder(dtype=int).fit_transform(dataFrame[[fieldsMappingName]]).toarray() # type: ignore
     # Add one-hot encoding field
     dataFrame[fieldsCases[fieldIndex]] = attackType_OneHotEncoder
     # Remove redundant fields
@@ -232,116 +234,116 @@ def Extraction_OneHotEncode_merged(dataFrame: pandas.DataFrame, fields: list[str
   """
   return Extraction_OneHotEncode_merged_cases(dataFrame, fields, Extraction_Cases(dataFrame, fields), use_notebook)
 # %%
-def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
-  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
+# def Extraction_Element_merged(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
+#   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
-  Args:
-    dataFrame (pandas.DataFrame): target dataFrame
-    fields (list[str]): target fields
-    parse (list): functions to convert the target field
-    elements (list[set[str]]): The set of elements to extract
-    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
+#   Args:
+#     dataFrame (pandas.DataFrame): target dataFrame
+#     fields (list[str]): target fields
+#     parse (list): functions to convert the target field
+#     elements (list[set[str]]): The set of elements to extract
+#     use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
-  Raises:
-    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
+#   Raises:
+#     ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
 
-  Returns:
-    pandas.DataFrame: result dataFrame
-  """
-  if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
-    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
-  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+#   Returns:
+#     pandas.DataFrame: result dataFrame
+#   """
+#   if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
+#     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+#   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
   
-  print(f"DataFrame.Extraction_Element: {fields}")
-  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
-  for field, parse, elements in zip(fields, parses, elementsList):
-    # Create new field to record the presence of each elements
-    elements_fieldName = dict()
-    for element in elements:
-      element_fieldName = field + "_" + element
-      # collision prevention
-      while element_fieldName in dataFrame:
-        element_fieldName += "_"
-      # create and record field
-      elements_fieldName[element] = element_fieldName
+#   print(f"DataFrame.Extraction_Element: {fields}")
+#   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
+#   for field, parse, elements in zip(fields, parses, elementsList):
+#     # Create new field to record the presence of each elements
+#     elements_fieldName = dict()
+#     for element in elements:
+#       element_fieldName = field + "_" + element
+#       # collision prevention
+#       while element_fieldName in dataFrame:
+#         element_fieldName += "_"
+#       # create and record field
+#       elements_fieldName[element] = element_fieldName
     
-    elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
+#     elements_dataFrame = pandas.DataFrame(columns=list(elements_fieldName.values()))
 
-    # Perform data extraction and update the new field
-    progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
-    for index, row in dataFrame.iterrows():
-      data = parse(str(row[field]))
-      feature = [1 if element in data else 0 for element in elements]
-      elements_dataFrame.loc[index] = feature
-      progressBar_1.update(1)
-    progressBar_1.close()
+#     # Perform data extraction and update the new field
+#     progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
+#     for index, row in dataFrame.iterrows():
+#       data = parse(str(row[field]))
+#       feature = [1 if element in data else 0 for element in elements]
+#       elements_dataFrame.loc[index] = feature # type: ignore
+#       progressBar_1.update(1)
+#     progressBar_1.close()
 
-    # Concatenate the temporary DataFrame with the original DataFrame
-    dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
+#     # Concatenate the temporary DataFrame with the original DataFrame
+#     dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
 
-    progressBar_0.update(1)
-  progressBar_0.close()
-  return dataFrame
+#     progressBar_0.update(1)
+#   progressBar_0.close()
+#   return dataFrame
 
-def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> pandas.DataFrame:
-  """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
+# def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[set[str]], use_notebook=False) -> list[pandas.DataFrame]:
+#   """After the specified field is divided according to the specified rule, the existence of the specified element is extracted.
 
-  Args:
-    dataFrame (pandas.DataFrame): target dataFrame
-    fields (list[str]): target fields
-    parse (list): functions to convert the target field
-    elements (list[set[str]]): The set of elements to extract
-    use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
+#   Args:
+#     dataFrame (pandas.DataFrame): target dataFrame
+#     fields (list[str]): target fields
+#     parse (list): functions to convert the target field
+#     elements (list[set[str]]): The set of elements to extract
+#     use_notebook (bool, optional): If True, use tqdm_notebook for progress bar visualization. Defaults to False.
 
-  Raises:
-    ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
+#   Raises:
+#     ValueError: different length: (len(fields)!=len(parses) or len(fields)!=len(elements))
 
-  Returns:
-    pandas.DataFrame: result dataFrame
-  """
-  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
-  if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
-    raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
-  result_list = list()
-  print(f"DataFrame.Extraction_Element: {fields}")
-  progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
-  for field, parse, elements in zip(fields, parses, elementsList):
-    # Create new field to record the presence of each elements
-    elements_fieldName = dict()
-    for element in elements:
-      element_fieldName = field + "_" + element
-      # collision prevention
-      while element_fieldName in dataFrame:
-        element_fieldName += "_"
-      # create and record field
-      elements_fieldName[element] = element_fieldName
+#   Returns:
+#     pandas.DataFrame: result dataFrame
+#   """
+#   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+#   if len(fields)!=len(parses) or len(fields)!=len(elementsList): 
+#     raise ValueError("different length: (len(fields)!=len(parses) or len(fields)!=len(elements))")
+#   result_list = list()
+#   print(f"DataFrame.Extraction_Element: {fields}")
+#   progressBar_0 = tqdm_func(total=len(fields), unit="field", desc="Fields")
+#   for field, parse, elements in zip(fields, parses, elementsList):
+#     # Create new field to record the presence of each elements
+#     elements_fieldName = dict()
+#     for element in elements:
+#       element_fieldName = field + "_" + element
+#       # collision prevention
+#       while element_fieldName in dataFrame:
+#         element_fieldName += "_"
+#       # create and record field
+#       elements_fieldName[element] = element_fieldName
     
-    # elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
-    elements_data = []
+#     # elements_dataFrame = pandas.DataFrame(columns=elements_fieldName.values())
+#     elements_data = []
 
-    # Perform data extraction and update the new field
-    progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
-    for index, row in dataFrame.iterrows():
-      data = parse(str(row[field]))
-      feature = [1 if element in data else 0 for element in elements]
-      # elements_dataFrame.loc[index] = feature
-      elements_data.append(feature)
-      progressBar_1.update(1)
-    progressBar_1.close()
+#     # Perform data extraction and update the new field
+#     progressBar_1 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {fields.index(field)+1}/{len(fields)}")
+#     for index, row in dataFrame.iterrows():
+#       data = parse(str(row[field]))
+#       feature = [1 if element in data else 0 for element in elements]
+#       # elements_dataFrame.loc[index] = feature
+#       elements_data.append(feature)
+#       progressBar_1.update(1)
+#     progressBar_1.close()
 
-    # # Concatenate the temporary DataFrame with the original DataFrame
-    # dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
+#     # # Concatenate the temporary DataFrame with the original DataFrame
+#     # dataFrame = pandas.concat([dataFrame, elements_dataFrame], axis=1)
 
-    result_array = numpy.array(elements_data)
-    result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
-    result_list.append(result_df)
+#     result_array = numpy.array(elements_data)
+#     result_df = pandas.DataFrame(result_array, columns=sum(elements_fieldName.values(), []))
+#     result_list.append(result_df)
 
-    progressBar_0.update(1)
-  progressBar_0.close()
+#     progressBar_0.update(1)
+#   progressBar_0.close()
 
-  return result_list
+#   return result_list
 
-def Extraction_Element_elementBatch_rowBatch_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[list[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> list(pandas.DataFrame):
+def Extraction_Element_(dataFrame: pandas.DataFrame, fields: list[str], parses: list, elementsList: list[list[str]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> list[pandas.DataFrame]:
   """Extract specified elements from the specified fields of a DataFrame using batch processing.
   
   The function divides the data into smaller batches specified by the `elementBatch_size` and `rowBatch_size` parameters.
@@ -431,7 +433,7 @@ def Extraction_Element_elementBatch_rowBatch_(dataFrame: pandas.DataFrame, field
   progressBar_0.close()
 
   return result_list
-def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, field_data: list[dict], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> list(pandas.DataFrame):
+def Extraction_Element(dataFrame: pandas.DataFrame, field_data: list[dict[str, object]], elementBatch_size=1, rowBatch_size=65536, use_notebook=False) -> list[pandas.DataFrame]:
   if len(field_data) == 0:
     raise ValueError("field_data cannot be empty")
 
@@ -440,65 +442,68 @@ def Extraction_Element_elementBatch_rowBatch(dataFrame: pandas.DataFrame, field_
 
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  progressBar_0 = tqdm_func(total=len(field_data), unit="field", desc="Fields")
+  progressBar_0 = tqdm_func(total=len(field_data), unit="field", desc="Fields:")
   for field_idx, field_info in enumerate(field_data, start=1):
-    field = field_info.get('field')
-    parse = field_info.get('parse')
-    elements = field_info.get('elements')
+    field: str | object | None = field_info.get("field")
+    parse: object | None = field_info.get("parse")
+    elements: list[str] | object | None = field_info.get("elements")
 
     elements_fieldName = dict()
-    for element in elements:
-      element_fieldName = field + "_" + element
+    for element in elements: # type: ignore
+      element_fieldName = field + "_" + element # type: ignore
       while element_fieldName in dataFrame:
         element_fieldName += "_"
       elements_fieldName[element] = element_fieldName
 
-    result_df_list = []  # List to store DataFrames for each batch
+    # result_df_list = []  # List to store DataFrames for each batch
 
     # Batch processing for elements
-    num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size))
-    progressBar_1 = tqdm_func(total=num_element_batches, unit="element batch", desc=f"Field {field_idx}/{len(field_data)}")
+    num_element_batches = int(numpy.ceil(len(elements) / elementBatch_size)) # type: ignore
+    progressBar_1 = tqdm_func(total=len(elements), unit="element", desc=f"Field {field_idx}/{len(field_data)}: Elements:") # type: ignore
     for element_batch_idx in range(num_element_batches):
       start_element_idx = element_batch_idx * elementBatch_size
-      end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements))
-      element_batch = elements[start_element_idx:end_element_idx]  # Get a batch of elements
+      end_element_idx = min((element_batch_idx + 1) * elementBatch_size, len(elements)) # type: ignore
+      element_batch = elements[start_element_idx:end_element_idx]  # type: ignore # Get a batch of elements
 
       # Batch processing for rows
       elements_data = []  # List to store parsed data for each batch of elements
       num_row_batches = int(numpy.ceil(len(dataFrame) / rowBatch_size))
-      progressBar_2 = tqdm_func(total=num_row_batches, unit="row batch", desc=f"Element Batch {element_batch_idx+1}/{num_element_batches}")
+      progressBar_2 = tqdm_func(total=len(dataFrame), unit="row", desc=f"Field {field_idx}/{len(field_data)}: Element {element_batch_idx*elementBatch_size}/{len(elements)}: Rows:") # type: ignore
       for row_batch_idx in range(num_row_batches):
         start_row_idx = row_batch_idx * rowBatch_size
         end_row_idx = min((row_batch_idx + 1) * rowBatch_size, len(dataFrame))
         row_batch_data = dataFrame.iloc[start_row_idx:end_row_idx]  # Get a batch of rows
 
         for index, row in row_batch_data.iterrows():
-          data = parse(str(row[field]))
+          data: list[str] = parse(str(row[field])) # type: ignore
           feature = [1 if element in data else 0 for element in element_batch]
           elements_data.append(feature)  # Append parsed data for each row in the batch
 
         del row_batch_data  # Delete row batch data to free memory
 
-        progressBar_2.update(1)
+        progressBar_2.update(end_row_idx-start_row_idx)
       progressBar_2.close()
 
       columns = [elements_fieldName[element] for element in element_batch]
       result_df = pandas.DataFrame(numpy.array(elements_data), columns=columns)
-      result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+      # result_df_list.append(result_df)  # Append DataFrame for the batch to the list
+      result_list.append(result_df)  # Append the list of DataFrames for the field
       del elements_data  # Delete elements data to release memory
 
-      progressBar_1.update(1)
+      # print(f"{elementBatch_size} if ({(element_batch_idx+1)*elementBatch_size} < {len(elements)}) else {(len(elements)-element_batch_idx*elementBatch_size)}") # type: ignore
+      progressBar_1.update(elementBatch_size if ((element_batch_idx+1)*elementBatch_size < len(elements)) else (len(elements)-element_batch_idx*elementBatch_size)) # type: ignore
     progressBar_1.close()
 
-    result_list.append(result_df_list)  # Append the list of DataFrames for the field
-    del result_df_list  # Delete result DataFrame list to free memory
+    # result_list.append(result_df)  # Append the list of DataFrames for the field
+    # result_list.append(result_df_list[0])  # Append the list of DataFrames for the field
+    # del result_df_list  # Delete result DataFrame list to free memory
 
     progressBar_0.update(1)
   progressBar_0.close()
 
   return result_list
 # %%
-def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25,75], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
+def Filter_Percentile(dataFrame: pandas.DataFrame, fields: list[str], round=1, borderCropping=4, borderPercentile=[25.0,75.0], whisker=1.5, whiskers=[1.5, 1.5], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """In the specified column, keep at least the specified percentile range, extend the range of retained values and filter by this range. Defaults parameters have been set to common IQR mode.
 
   Args:
@@ -577,7 +582,7 @@ def Filter_Quartile(dataFrame: pandas.DataFrame, fields: list[str], round=1, plo
   """
   return Filter_Percentile(dataFrame, fields, round, plotDisplay=plotDisplay, plotsDisplay=plotsDisplay, use_notebook=use_notebook)
 # %%
-def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2, stddevRanges=[2, 2], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
+def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], round=1, stddevRange=2.0, stddevRanges=[2.0, 2.0], plotDisplay=False, plotsDisplay=False, use_notebook=False) -> pandas.DataFrame: 
   """Use the rule of normal distribution in the specified field, and retain the items whose distance from the mean is less than the specified standard deviation
 
   Args:
@@ -635,14 +640,14 @@ def Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], ro
     # matplotlib.pyplot.show()
   return dataFrame
 # %%
-def Filter_Features(features, target, threshold=0.8, use_notebook=False):
+def Filter_Features(features: list[pandas.DataFrame], target: pandas.DataFrame, threshold=0.8, use_notebook=False) -> list[pandas.DataFrame]:
   # Step 0: Check the length of feature and target
   for feature in features:
     if len(feature) != len(target):
-      raise ValueError(f"Length of feature and target should be the same. {len(feature)} != {len(target)}")
+      raise ValueError(f"Length of feature and target should be the same. {len(feature)} != {len(target)} : {feature}")
   tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
 
-  result_list = []
+  result_list: list[pandas.DataFrame] = []
 
   for feature in features:
     feature_df = pd.DataFrame(feature)  # Convert feature to DataFrame if necessary
@@ -660,7 +665,7 @@ def Filter_Features(features, target, threshold=0.8, use_notebook=False):
     # Find highly correlated features
     for i in range(len(corr_matrix.columns)):
       for j in range(i):
-        if corr_matrix.iloc[i, j] > threshold:
+        if corr_matrix.iloc[i, j] > threshold: # type: ignore
           colname = corr_matrix.columns[i]
           correlated_features.add(colname)
 
@@ -668,7 +673,7 @@ def Filter_Features(features, target, threshold=0.8, use_notebook=False):
     correlated_features = correlated_features.intersection(feature_df.columns)
 
     # Step 3: Return the filtered feature DataFrame
-    result_list.append(feature_df.drop(columns=correlated_features))
+    result_list.append(feature_df.drop(columns=correlated_features)) # type: ignore
 
   return result_list
 # %%
@@ -692,7 +697,7 @@ def Process_Normalization(dataFrame: pandas.DataFrame, fields: list[str], use_no
   progressBar_0.close()
   return dataFrame
 # %%
-def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2, stddevRanges=[2, 2], use_notebook=False) -> list[list]:
+def Extraction_Filter_NormalDistribution_(dataFrame: pandas.DataFrame, fields: list[str], field_analyzes: list, stddevRange=2.0, stddevRanges=[2.0, 2.0], use_notebook=False) -> list[list]:
   """Obtain keywords from the content of each field through the specified analysis method, and then extract keywords whose occurrence frequency deviation from the mean is less than the specified standard deviation
 
   Args:
@@ -725,6 +730,40 @@ def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, fields: li
     progressBar_1 = tqdm_func(total=len(dataFrame[fields[fieldIndex]].dropna().to_list()), unit="feature", desc=f"Field {fieldIndex+1}/{len(fields)}")
     for domain in dataFrame[fields[fieldIndex]].dropna().to_list():
       population += field_analyzes[fieldIndex](domain)
+      progressBar_1.update(1)
+    progressBar_1.close()
+    # Merge content
+    case = list(set(population))
+    # Statistical frequency
+    count = numpy.array([population.count(case) for case in case])
+    # Computes the standard deviation of frequency
+    meanDiff = count-count.mean()
+    # Normal distribution extraction field index
+    keys = []
+    for key_index in numpy.where((meanDiff<(stddevRanges[1]*count.std()))&(meanDiff>(-stddevRanges[0]*count.std())))[0]:
+      keys += [case[key_index]]
+    result += [keys]
+    progressBar_0.update(1)
+  progressBar_0.close()
+  return result
+def Extraction_Filter_NormalDistribution(dataFrame: pandas.DataFrame, field_data: list[dict[str, object]], stddevRange=2.0, stddevRanges=[2.0, 2.0], use_notebook=False) -> list[list]:
+  tqdm_func = tqdm.tqdm_notebook if use_notebook else tqdm.tqdm
+  # stddevRange will override stddevRanges
+  if stddevRange!=2:
+    stddevRanges[0] = stddevRange
+    stddevRanges[1] = stddevRange
+  result = []
+  print(f"DataFrame.Extraction_Filter_NormalDistribution: {[field_info.get('field') for field_info in field_data]}")
+  progressBar_0 = tqdm_func(total=len(field_data), unit="field", desc="Fields")
+  # for fieldIndex in range(len(fields)):
+  for field_idx, field_info in enumerate(field_data, start=1):
+    field: str | object | None = field_info.get("field")
+    parse: object | None = field_info.get("parse")
+    # Extract data
+    population = []
+    progressBar_1 = tqdm_func(total=len(dataFrame[field].dropna().to_list()), unit="feature", desc=f"Field {field_idx+1}/{len(field_data)}")
+    for domain in dataFrame[field].dropna().to_list():
+      population += parse(domain) # type: ignore
       progressBar_1.update(1)
     progressBar_1.close()
     # Merge content
